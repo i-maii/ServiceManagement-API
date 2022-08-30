@@ -7,21 +7,21 @@ import javax.persistence.*;
 
 @Entity
 @EntityListeners(AuditingEntityListener.class)
-@Table(name = "USER")
+@Table(name = "APARTMENT")
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
-public class User {
+public class Apartment {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    private String username;
+    private String name;
 
-    private String password;
+    private String address;
 
-    private String role;
+    private double latitude;
 
-    private String phoneNo;
+    private double longitude;
 }

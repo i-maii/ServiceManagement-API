@@ -7,21 +7,23 @@ import javax.persistence.*;
 
 @Entity
 @EntityListeners(AuditingEntityListener.class)
-@Table(name = "USER")
+@Table(name = "TENANT")
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
-public class User {
+public class Tenant {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    private String username;
+    @OneToOne
+    @JoinColumn(name = "user_id")
+    private User user;
 
-    private String password;
+    @OneToOne
+    @JoinColumn(name = "apartment_id")
+    private Apartment apartment;
 
-    private String role;
-
-    private String phoneNo;
+    private String roomNo;
 }
