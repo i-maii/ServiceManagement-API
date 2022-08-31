@@ -1,5 +1,7 @@
 package com.example.servicemanagement.dto;
 
+import com.example.servicemanagement.entity.Apartment;
+import com.example.servicemanagement.entity.Request;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -16,4 +18,7 @@ public class TechnicianPlanDto {
     private Integer tenantId;
     private Integer priority;
     private Integer estimateTime;
+
+    private Request request;
+    private Apartment apartment;
 }

@@ -9,6 +9,10 @@ import java.util.List;
 public interface TechnicianRepository extends JpaRepository<Technician, Integer> {
     int countTechnicianByAvailable(boolean isAvailable);
     List<Technician> findTechniciansByAvailable(boolean isAvailable);
+    Technician findTechnicianById(Integer id);
+
+    @Query(nativeQuery = true, value = "SELECT t.* FROM TECHNICIAN t WHERE t.id = (SELECT ta.technician_id FROM TECHNICIAN_ABILITIES ta GROUP BY ta.technician_id ORDER BY COUNT(*) ASC LIMIT 1)")
+    Technician findLowestTechnician();
 
     @Query(nativeQuery = true, value = "SELECT t.is_available FROM TECHNICIAN t WHERE t.id = (SELECT ta.technician_id FROM TECHNICIAN_ABILITIES ta GROUP BY ta.technician_id ORDER BY COUNT(*) ASC LIMIT 1)")
     boolean isLowestAbilitiesTechnicianAvailable();

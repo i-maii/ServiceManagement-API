@@ -29,6 +29,8 @@ public class RequestService {
                 technicianPlanDto.setRequestTypeId(request.getRequestType().getId());
                 technicianPlanDto.setEstimateTime(request.getEstimateTime());
                 technicianPlanDto.setPriority(request.getRequestType().getPriority());
+                technicianPlanDto.setRequest(request);
+                technicianPlanDto.setApartment(request.getTenant().getApartment());
 
                 if (request.getRequestType().getPriority() == 4 && !(request.getRequestDate().after(start) && request.getRequestDate().before(end))) {
                     technicianPlanDto.setPriority(5);

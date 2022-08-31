@@ -17,7 +17,7 @@ public class ScheduleController {
     ScheduleService scheduleService;
 
     @GetMapping("/")
-    public List<List<TechnicianPlanDto>> getPossibleServiceRequest() throws ParseException {
+    public List<TechnicianPlanDto> getPossibleServiceRequest() throws ParseException {
         return this.scheduleService.findRequestWithSpecificHour(8);
     }
 }

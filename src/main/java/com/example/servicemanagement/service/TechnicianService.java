@@ -25,6 +25,14 @@ public class TechnicianService {
         return this.technicianRepository.findAll();
     }
 
+    public Technician getTechnicianById(Integer id) {
+        return this.technicianRepository.findTechnicianById(id);
+    }
+
+    public Technician getLowestTechnician() {
+        return this.technicianRepository.findLowestTechnician();
+    }
+
     public boolean checkLowestAbilitiesTechnicianAvailable() {
         return this.technicianRepository.isLowestAbilitiesTechnicianAvailable();
     }

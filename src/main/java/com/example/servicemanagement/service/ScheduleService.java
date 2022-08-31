@@ -2,8 +2,10 @@ package com.example.servicemanagement.service;
 
 import com.example.servicemanagement.dto.TechnicianPlanDto;
 import com.example.servicemanagement.entity.Request;
+import com.example.servicemanagement.entity.Schedule;
 import com.example.servicemanagement.entity.Technician;
 import com.example.servicemanagement.repository.RequestRepository;
+import com.example.servicemanagement.repository.ScheduleRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -19,9 +21,13 @@ public class ScheduleService {
 
     private int totalApartment = 6;
     private boolean keepworking = true;
+    private int bestRequestPlanId = 0;
 
     @Autowired
     RequestRepository requestRepository;
+
+    @Autowired
+    ScheduleRepository scheduleRepository;
 
     @Autowired
     RequestService requestService;
@@ -29,7 +35,7 @@ public class ScheduleService {
     @Autowired
     TechnicianService technicianService;
 
-    public List<List<TechnicianPlanDto>> findRequestWithSpecificHour(int targetHour) throws ParseException {
+    public List<TechnicianPlanDto> findRequestWithSpecificHour(int targetHour) throws ParseException {
         List<Request> serviceRequestList = this.requestRepository.findRequestsByStatus("ready to service");
         List<TechnicianPlanDto> technicianPlanDtoList = this.requestService.reorderPriority(serviceRequestList);
 
@@ -40,15 +46,14 @@ public class ScheduleService {
         Integer[] range = findRangePriority(technicianPlanDtoList, availableTechnician.size());
 
         if (isLowestTechnicianAvailable) {
-            List<List<TechnicianPlanDto>> lowestRequest = findRequestForLowestTechnician(technicianPlanDtoList, range);
-            return lowestRequest;
+            return findLowestTechnicianRequest(technicianPlanDtoList, range);
         }
 
         List<List<TechnicianPlanDto>> res = new ArrayList<>();
         List<TechnicianPlanDto> ds = new ArrayList<>();
         findPossibleRequest(res, ds, targetHour, technicianPlanDtoList, 0, range);
 
-        return res;
+        return null;
     }
 
     private void findPossibleRequest(List<List<TechnicianPlanDto>> res, List<TechnicianPlanDto> ds, int target, List<TechnicianPlanDto> arr, int index, Integer[] rangePriority){
@@ -121,35 +126,85 @@ public class ScheduleService {
         return new Integer[]{start, 8};
     }
 
-    private List<List<TechnicianPlanDto>> findRequestForLowestTechnician(List<TechnicianPlanDto> technicianPlanDtoList, Integer[] rangePriority) {
+    private List<TechnicianPlanDto> findLowestTechnicianRequest(List<TechnicianPlanDto> technicianPlanDtoList, Integer[] rangePriority) {
         List<Integer> requestTypeList = this.technicianService.getAllRequestTypeOfLowestTechnician();
 
         List<TechnicianPlanDto> lowestTechnicianRequest = technicianPlanDtoList.stream().filter(technicianPlanDto -> requestTypeList.contains(technicianPlanDto.getRequestTypeId())).toList();
 
-        List<List<TechnicianPlanDto>> res = new ArrayList<>();
-        List<TechnicianPlanDto> ds = new ArrayList<>();
-        findPossibleRequest(res, ds, 8, lowestTechnicianRequest, 0, rangePriority);
+        List<List<TechnicianPlanDto>> possiblePlanList = new ArrayList<>();
+        List<TechnicianPlanDto> possiblePlan = new ArrayList<>();
+        findPossibleRequest(possiblePlanList, possiblePlan, 8, lowestTechnicianRequest, 0, rangePriority);
 
-        if (res.size() > 1) {
-            for (List<TechnicianPlanDto> technicianPlanList: res) {
-                List<Integer> requestIds = technicianPlanList.stream().map(TechnicianPlanDto::getRequestId).toList();
-                List<TechnicianPlanDto> remainingRequest = technicianPlanDtoList.stream().filter(Predicate.not(technicianPlanDto -> requestIds.contains(technicianPlanDto.getRequestId()))).toList();
+        List<List<TechnicianPlanDto>> otherPlanList = new ArrayList<>();
+        if (possiblePlanList.size() > 1) {
+            for (List<TechnicianPlanDto> technicianPlanList: possiblePlanList) {
+                List<TechnicianPlanDto> remainingRequest = technicianPlanDtoList.stream().filter(Predicate.not(technicianPlanList::contains)).toList();
+                List<TechnicianPlanDto> priorityRequest = remainingRequest.stream().filter(technicianPlanDto -> Arrays.asList(1, 2, 3).contains(technicianPlanDto.getPriority())).toList();
+                List<TechnicianPlanDto> normalRequest = remainingRequest.stream().filter(Predicate.not(priorityRequest::contains)).toList();
 
-                List<TechnicianPlanDto> r = new ArrayList<>();
-                findPossibleRemainingRequest(r, 16, remainingRequest, 0);
+                List<Integer> apartmentIds = findApartmentId(technicianPlanList, priorityRequest);
+                totalApartment = normalRequest.size();
+                keepworking = true;
+
+                int priorityHour = priorityRequest.stream().map(TechnicianPlanDto::getEstimateTime).mapToInt(Integer::intValue).sum();
+
+                List<List<TechnicianPlanDto>> possibleOtherPlanList = new ArrayList<>();
+                List<TechnicianPlanDto> possibleOtherPlan = new ArrayList<>();
+                findPossibleRemainingRequest(possibleOtherPlanList, possibleOtherPlan, 16 - priorityHour, normalRequest, 0, apartmentIds);
+
+                List<TechnicianPlanDto> newPlan = new ArrayList<>(priorityRequest);
+                newPlan.addAll(possibleOtherPlanList.get(0));
+                otherPlanList.add(newPlan);
             }
         }
 
-        return res;
+        List<TechnicianPlanDto> bestRequest = checkBestRequest(otherPlanList);
+
+        //save plan for lowestTechnician
+        List<TechnicianPlanDto> lowestTechnicianPlan = possiblePlanList.get(bestRequestPlanId);
+        for (TechnicianPlanDto planDto: lowestTechnicianPlan) {
+            Schedule schedule = new Schedule();
+            schedule.setRequest(planDto.getRequest());
+            schedule.setApartment(planDto.getApartment());
+            schedule.setTechnician(this.technicianService.getLowestTechnician());
+            this.scheduleRepository.saveAndFlush(schedule);
+        }
+
+        return bestRequest;
     }
 
-    private void findPossibleRemainingRequest(List<TechnicianPlanDto> ds, int target, List<TechnicianPlanDto> arr, int index) {
+    private List<TechnicianPlanDto> checkBestRequest(List<List<TechnicianPlanDto>> otherPlanList) {
+        List<TechnicianPlanDto> bestRequest = new ArrayList<>();
+        int maxNum = -1;
+        for (List<TechnicianPlanDto> plan: otherPlanList) {
+            int numberOfPriority4 = plan.stream().map(TechnicianPlanDto::getPriority).filter(priority -> priority == 4).toList().size();
+            if (numberOfPriority4 > maxNum) {
+                maxNum = numberOfPriority4;
+                bestRequest.clear();
+                bestRequest.addAll(plan);
+                bestRequestPlanId = otherPlanList.indexOf(plan);
+            }
+        }
+
+        return bestRequest;
+    }
+
+    private void findPossibleRemainingRequest(List<List<TechnicianPlanDto>> res, List<TechnicianPlanDto> ds, int target, List<TechnicianPlanDto> arr, int index, List<Integer> apartment) {
         if (!keepworking) {
             return;
         }
-        
+
         if (target == 0) {
-            keepworking = false;
+            int remainingNumberOfApartment = ds.stream().map(TechnicianPlanDto::getApartmentId).filter(Predicate.not(apartment::contains)).toList().size();
+            if (remainingNumberOfApartment == 0) {
+                res.clear();
+                res.add(new ArrayList<>(ds));
+                keepworking = false;
+            } else if (remainingNumberOfApartment < totalApartment) {
+                totalApartment = remainingNumberOfApartment;
+                res.clear();
+                res.add(new ArrayList<>(ds));
+            }
             return;
         }
         
@@ -158,8 +213,15 @@ public class ScheduleService {
                 break;
             
             ds.add(arr.get(i));
-            findPossibleRemainingRequest(ds, target-arr.get(i).getEstimateTime() , arr, i+1);
+            findPossibleRemainingRequest(res, ds, target-arr.get(i).getEstimateTime() , arr, i+1, apartment);
             ds.remove(ds.size()-1 );
         }
+    }
+
+    private List<Integer> findApartmentId(List<TechnicianPlanDto> planList, List<TechnicianPlanDto> priorityRequest) {
+        List<TechnicianPlanDto> allRequest = new ArrayList<>(planList);
+        allRequest.addAll(priorityRequest);
+
+        return allRequest.stream().map(TechnicianPlanDto::getApartmentId).distinct().toList();
     }
 }
