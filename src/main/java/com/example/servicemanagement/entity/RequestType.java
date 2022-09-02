@@ -7,21 +7,17 @@ import javax.persistence.*;
 
 @Entity
 @EntityListeners(AuditingEntityListener.class)
-@Table(name = "USER")
+@Table(name = "REQUEST_TYPE")
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
-public class User {
+public class RequestType {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    private String username;
+    private String name;
 
-    private String password;
-
-    private String role;
-
-    private String phoneNo;
+    private Integer priority;
 }

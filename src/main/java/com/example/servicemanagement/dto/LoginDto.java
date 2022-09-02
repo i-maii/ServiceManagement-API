@@ -1,13 +1,12 @@
 package com.example.servicemanagement.dto;
 
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@Data
 public class LoginDto {
-    @Getter
-    @Setter
     private String username;
-    @Getter
-    @Setter
     private String password;
 }
