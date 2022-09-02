@@ -41,6 +41,10 @@ public class TechnicianService {
         return this.technicianRepository.findRequestTypeOfLowestTechnician();
     }
 
+    public List<Integer> getPriorityRequestTypeOfLowestTechnician() {
+        return this.technicianRepository.findPriorityRequestTypeOfLowestTechnician();
+    }
+
     public boolean test() {
         return this.technicianRepository.isLowestAbilitiesTechnicianAvailable();
     }

@@ -2,48 +2,133 @@ package com.example.servicemanagement.service;
 
 import com.example.servicemanagement.dto.TechnicianPlanDto;
 import com.example.servicemanagement.entity.Request;
+import com.example.servicemanagement.repository.RequestRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
+import static com.example.servicemanagement.constant.Constant.*;
+
 @Service
 public class RequestService {
 
-    public List<TechnicianPlanDto> reorderPriority(List<Request> requestList) throws ParseException {
+    @Autowired
+    RequestRepository requestRepository;
 
+    @Autowired
+    TechnicianService technicianService;
+
+    public Request getRequestById(Integer id) {
+        return this.requestRepository.findRequestById(id);
+    }
+    public List<Request> getRequestByStatus(String status) {
+        return this.requestRepository.findRequestsByStatus(status);
+    }
+
+    public Integer getTotalRequestHour() {
+        List<Request> allRequest = getRequestByStatus(STATUS_READY_FOR_PLAN);
+        return allRequest.stream().map(Request::getEstimateTime).mapToInt(Integer::intValue).sum();
+    }
+
+    public Integer getLowestTotalHour() {
+        List<Request> lowestRequest = getLowestRequest();
+
+        return lowestRequest.stream().map(Request::getEstimateTime).mapToInt(Integer::intValue).sum();
+    }
+
+    public Integer getLowestTotalHour(List<TechnicianPlanDto> allRequest) {
+        List<Integer> requestTypeList = this.technicianService.getAllRequestTypeOfLowestTechnician();
+        List<TechnicianPlanDto> lowestRequest = allRequest.stream().filter(req -> requestTypeList.contains(req.getRequestTypeId())).toList();
+
+        return lowestRequest.stream().map(TechnicianPlanDto::getEstimateTime).mapToInt(Integer::intValue).sum();
+    }
+
+    public Integer getTotalPriorityHour() {
+        List<Request> allRequest = getRequestByStatus(STATUS_READY_FOR_PLAN);
+        return allRequest.stream().filter(req -> MOST_PRIORITY.contains(req.getRequestType().getPriority())).map(Request::getEstimateTime).mapToInt(Integer::intValue).sum();
+    }
+
+    public Integer getLowestTotalPriorityHour() {
+        List<Request> allRequest = getLowestRequest();
+        List<Integer> priorityRequestType = this.technicianService.getPriorityRequestTypeOfLowestTechnician();
+        return allRequest.stream().filter(req -> priorityRequestType.contains(req.getRequestType().getPriority())).map(Request::getEstimateTime).mapToInt(Integer::intValue).sum();
+    }
+
+    public List<TechnicianPlanDto> getLowestRequest(List<TechnicianPlanDto> allRequest) {
+        List<Integer> requestTypeList = this.technicianService.getAllRequestTypeOfLowestTechnician();
+
+        return allRequest.stream().filter(req -> requestTypeList.contains(req.getRequestTypeId())).toList();
+    }
+
+    public List<Request> getLowestRequest() {
+        List<Integer> requestTypeList = this.technicianService.getAllRequestTypeOfLowestTechnician();
+        List<Request> allRequest = getRequestByStatus(STATUS_READY_FOR_PLAN);
+
+        return allRequest.stream().filter(req -> requestTypeList.contains(req.getRequestType().getId())).toList();
+    }
+
+    public void updateRequestStatusReadyToService(Request request) {
+        request.setStatus(STATUS_READY_TO_SERVICE);
+        this.requestRepository.saveAndFlush(request);
+    }
+
+    public List<TechnicianPlanDto> reorderPriority(List<Request> requestList) throws ParseException {
         Date[] dateRange = this.getLastWeekRange();
         Date start = dateRange[0];
         Date end = dateRange[1];
 
-        boolean haveOlderRequest = checkOlderRequest(requestList, start, end);
-
         List<TechnicianPlanDto> technicianPlanDtoList = new ArrayList<>();
-        if (haveOlderRequest) {
-            requestList.forEach(request -> {
-                TechnicianPlanDto technicianPlanDto = new TechnicianPlanDto();
-                technicianPlanDto.setRequestId(request.getId());
-                technicianPlanDto.setApartmentId(request.getTenant().getApartment().getId());
-                technicianPlanDto.setTenantId(request.getTenant().getId());
-                technicianPlanDto.setRequestTypeId(request.getRequestType().getId());
-                technicianPlanDto.setEstimateTime(request.getEstimateTime());
-                technicianPlanDto.setPriority(request.getRequestType().getPriority());
-                technicianPlanDto.setRequest(request);
-                technicianPlanDto.setApartment(request.getTenant().getApartment());
+        requestList.forEach(request -> {
+            TechnicianPlanDto technicianPlanDto = new TechnicianPlanDto();
+            technicianPlanDto.setRequestId(request.getId());
+            technicianPlanDto.setApartmentId(request.getTenant().getApartment().getId());
+            technicianPlanDto.setTenantId(request.getTenant().getId());
+            technicianPlanDto.setRequestTypeId(request.getRequestType().getId());
+            technicianPlanDto.setEstimateTime(request.getEstimateTime());
+            technicianPlanDto.setPriority(request.getRequestType().getPriority());
+            technicianPlanDto.setRequest(request);
+            technicianPlanDto.setApartment(request.getTenant().getApartment());
 
-                if (request.getRequestType().getPriority() == 4 && !(request.getRequestDate().after(start) && request.getRequestDate().before(end))) {
-                    technicianPlanDto.setPriority(5);
-                }
+            if (request.getRequestType().getPriority() == 4 && !(request.getRequestDate().after(start) && request.getRequestDate().before(end))) {
+                technicianPlanDto.setPriority(5);
+            }
 
-                technicianPlanDtoList.add(technicianPlanDto);
-            });
-        }
+            technicianPlanDtoList.add(technicianPlanDto);
+        });
+
+        return technicianPlanDtoList;
+    }
+
+    public List<TechnicianPlanDto> requestListToTechnicianPlan(List<Request> requestList) {
+        List<TechnicianPlanDto> technicianPlanDtoList = new ArrayList<>();
+        requestList.forEach(request -> {
+            TechnicianPlanDto technicianPlanDto = new TechnicianPlanDto();
+            technicianPlanDto.setRequestId(request.getId());
+            technicianPlanDto.setApartmentId(request.getTenant().getApartment().getId());
+            technicianPlanDto.setTenantId(request.getTenant().getId());
+            technicianPlanDto.setRequestTypeId(request.getRequestType().getId());
+            technicianPlanDto.setEstimateTime(request.getEstimateTime());
+            technicianPlanDto.setPriority(request.getRequestType().getPriority());
+            technicianPlanDto.setRequest(request);
+            technicianPlanDto.setApartment(request.getTenant().getApartment());
+            technicianPlanDtoList.add(technicianPlanDto);
+        });
 
         return technicianPlanDtoList;
     }
 
     private boolean checkOlderRequest(List<Request> requestList, Date start, Date end) {
+        return requestList.stream().anyMatch(request -> (request.getRequestDate().after(start) && request.getRequestDate().before(end)));
+    }
+
+    public boolean checkOlderRequest(List<Request> requestList) throws ParseException {
+        Date[] dateRange = this.getLastWeekRange();
+        Date start = dateRange[0];
+        Date end = dateRange[1];
+
         return requestList.stream().anyMatch(request -> (request.getRequestDate().after(start) && request.getRequestDate().before(end)));
     }
 

@@ -5,9 +5,7 @@ import com.example.servicemanagement.entity.Request;
 import com.example.servicemanagement.repository.RequestRepository;
 import com.example.servicemanagement.service.RequestService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.text.ParseException;
 import java.util.List;
