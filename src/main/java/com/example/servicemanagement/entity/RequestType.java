@@ -20,4 +20,8 @@ public class RequestType {
     private String name;
 
     private Integer priority;
+
+    @OneToOne
+    @JoinColumn(name = "role_id")
+    private Role role;
 }
