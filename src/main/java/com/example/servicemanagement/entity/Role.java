@@ -1,29 +1,24 @@
 package com.example.servicemanagement.entity;
 
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import javax.persistence.*;
 
 @Entity
 @EntityListeners(AuditingEntityListener.class)
-@Table(name = "USER")
+@Table(name = "ROLE")
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
-public class User {
+public class Role {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    private String username;
-
-    private String password;
-
-    @OneToOne
-    @JoinColumn(name = "role_id")
-    private Role role;
-
-    private String phoneNo;
+    private String name;
 }
