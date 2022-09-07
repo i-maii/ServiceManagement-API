@@ -2,7 +2,6 @@ package com.example.servicemanagement.service;
 
 import com.example.servicemanagement.dto.TechnicianPlanDto;
 import com.example.servicemanagement.entity.Request;
-import com.example.servicemanagement.entity.RequestType;
 import com.example.servicemanagement.repository.RequestRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -22,36 +21,16 @@ public class RequestService {
     @Autowired
     TechnicianService technicianService;
 
-    @Autowired
-    RequestTypeService requestTypeService;
-
-    @Autowired
-    TenantService tenantService;
-
     public Request getRequestById(Integer id) {
         return this.requestRepository.findRequestById(id);
     }
-
     public List<Request> getRequestByStatus(String status) {
         return this.requestRepository.findRequestsByStatus(status);
     }
 
-    public List<Request> getAllRequestForPlanning() {
-        List<RequestType> requestTypes = this.requestTypeService.getRequestTypeForTechnician();
-        return this.requestRepository.findRequestsByStatusAndRequestTypeIn(STATUS_READY_FOR_PLAN, requestTypes);
-    }
-
     public Integer getTotalRequestHour() {
         List<Request> allRequest = getRequestByStatus(STATUS_READY_FOR_PLAN);
-        boolean require2Technician = checkRequire2Technician(allRequest);
-
-        int sum = 0;
-        if (require2Technician) {
-            sum += allRequest.stream().filter(req -> req.getEstimateTechnician() > 1).map(Request::getEstimateTime).mapToInt(Integer::intValue).sum();
-        }
-        sum += allRequest.stream().map(Request::getEstimateTime).mapToInt(Integer::intValue).sum();
-
-        return sum;
+        return allRequest.stream().map(Request::getEstimateTime).mapToInt(Integer::intValue).sum();
     }
 
     public Integer getLowestTotalHour() {
@@ -153,10 +132,6 @@ public class RequestService {
         return requestList.stream().anyMatch(request -> (request.getRequestDate().after(start) && request.getRequestDate().before(end)));
     }
 
-    public boolean checkRequire2Technician(List<Request> allRequest) {
-        return allRequest.stream().anyMatch(req -> req.getEstimateTechnician() > 1);
-    }
-
     private Date[] getLastWeekRange() throws ParseException {
 //        Date date = new Date();
         Date date = new SimpleDateFormat("yyyy-MM-dd").parse("2022-08-24");
@@ -184,20 +159,5 @@ public class RequestService {
         }
 
         return Arrays.asList(1, 2, 3);
-    }
-
-    public void createRequest(Request request) {
-        request.setStatus(STATUS_READY_FOR_ESTIMATION);
-
-        this.requestRepository.saveAndFlush(request);
-    }
-
-    public List<Request> getRequestListByTenantId(Integer id) {
-        return this.requestRepository.findRequestsByTenantId(id);
-    }
-
-    public void updateRequest(Integer id, Request request) {
-        request.setId(id);
-        this.requestRepository.saveAndFlush(request);
     }
 }

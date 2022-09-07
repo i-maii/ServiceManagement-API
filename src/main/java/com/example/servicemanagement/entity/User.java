@@ -21,9 +21,7 @@ public class User {
 
     private String password;
 
-    @OneToOne
-    @JoinColumn(name = "role_id")
-    private Role role;
+    private String role;
 
     private String phoneNo;
 }

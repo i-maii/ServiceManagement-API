@@ -6,6 +6,8 @@ import com.example.servicemanagement.repository.ConfigRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 import static com.example.servicemanagement.constant.Constant.*;
 
 @Service
@@ -122,21 +124,12 @@ public class ConfigService {
 
         updateConfigByKey(KEY_TOTAL_TARGET_HOUR, String.valueOf(totalTargetHour));
 
-        if (targetHour.length == 1) {
-            updateConfigByKey(KEY_TECHNICIAN_TARGET_HOUR_1, String.valueOf(targetHour[0]));
-            updateConfigByKey(KEY_TECHNICIAN_TARGET_HOUR_2, "0");
-            updateConfigByKey(KEY_TECHNICIAN_TARGET_HOUR_3, "0");
-            updateConfigByKey(KEY_LOWEST_TOTAL_PRIORITY_HOUR, "0");
-        } else if (targetHour.length == 2) {
-            updateConfigByKey(KEY_TECHNICIAN_TARGET_HOUR_1, String.valueOf(targetHour[0]));
+        updateConfigByKey(KEY_TECHNICIAN_TARGET_HOUR_1, String.valueOf(targetHour[0]));
+        if (targetHour.length == 2) {
             updateConfigByKey(KEY_TECHNICIAN_TARGET_HOUR_2, String.valueOf(targetHour[1]));
-            updateConfigByKey(KEY_TECHNICIAN_TARGET_HOUR_3, "0");
-            updateConfigByKey(KEY_LOWEST_TOTAL_PRIORITY_HOUR, "0");
-        } else {
-            updateConfigByKey(KEY_TECHNICIAN_TARGET_HOUR_1, String.valueOf(targetHour[0]));
-            updateConfigByKey(KEY_TECHNICIAN_TARGET_HOUR_2, String.valueOf(targetHour[1]));
+        }
+        if (targetHour.length == 3) {
             updateConfigByKey(KEY_TECHNICIAN_TARGET_HOUR_3, String.valueOf(targetHour[2]));
-            updateConfigByKey(KEY_LOWEST_TOTAL_PRIORITY_HOUR, String.valueOf(lowestTotalPriorityHour));
         }
 
         updateConfigByKey(KEY_PRIORITY_HOUR_MIN, String.valueOf(priorityHourMin));
