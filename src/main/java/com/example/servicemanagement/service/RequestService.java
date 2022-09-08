@@ -54,7 +54,7 @@ public class RequestService {
         return sum;
     }
 
-    public Integer getLowestTotalHour() {
+    public Integer getLowestTotalRequestHour() {
         List<Request> lowestRequest = getLowestRequest();
 
         return lowestRequest.stream().map(Request::getEstimateTime).mapToInt(Integer::intValue).sum();
