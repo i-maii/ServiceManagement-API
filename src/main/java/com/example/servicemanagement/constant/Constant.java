@@ -4,8 +4,8 @@ import java.util.Arrays;
 import java.util.List;
 
 public class Constant {
-    public static List<Integer> MOST_PRIORITY = Arrays.asList(1, 2, 3);
-    public static List<Integer> ALL_PRIORITY = Arrays.asList(1, 2, 3, 4);
+    public static List<Integer> MOST_PRIORITY = Arrays.asList(1, 2);
+    public static List<Integer> ALL_PRIORITY = Arrays.asList(1, 2, 3);
 
     public static String KEY_TOTAL_REQUEST_HOUR = "KEY_TOTAL_REQUEST_HOUR";
     public static String KEY_TOTAL_TARGET_HOUR = "KEY_TOTAL_TARGET_HOUR";
