@@ -69,16 +69,16 @@ public class RequestService {
         int sum = 0;
 
         if (require2Technician) {
-            sum += allRequest.stream().filter(req -> MOST_PRIORITY.contains(req.getRequestType().getPriority()) && req.getEstimateTechnician() > 1).map(Request::getEstimateTime).mapToInt(Integer::intValue).sum();
+            sum += allRequest.stream().filter(req -> MOST_PRIORITY.contains(req.getPriority()) && req.getEstimateTechnician() > 1).map(Request::getEstimateTime).mapToInt(Integer::intValue).sum();
         }
-        sum += allRequest.stream().filter(req -> MOST_PRIORITY.contains(req.getRequestType().getPriority())).map(Request::getEstimateTime).mapToInt(Integer::intValue).sum();
+        sum += allRequest.stream().filter(req -> MOST_PRIORITY.contains(req.getPriority())).map(Request::getEstimateTime).mapToInt(Integer::intValue).sum();
 
         return sum;
     }
 
     public Integer getLowestTotalPriorityHour() {
         List<Request> allRequest = getLowestRequest();
-        List<Integer> priorityRequestType = this.technicianService.getPriorityRequestTypeOfLowestTechnician();
+        List<Integer> priorityRequestType = Arrays.asList(1, 2, 3);
 
         return allRequest.stream().filter(req -> priorityRequestType.contains(req.getRequestType().getId())).map(Request::getEstimateTime).mapToInt(Integer::intValue).sum();
     }
@@ -114,12 +114,12 @@ public class RequestService {
             technicianPlanDto.setTenantId(request.getTenant().getId());
             technicianPlanDto.setRequestTypeId(request.getRequestType().getId());
             technicianPlanDto.setEstimateTime(request.getEstimateTime());
-            technicianPlanDto.setPriority(request.getRequestType().getPriority());
+            technicianPlanDto.setPriority(request.getPriority());
             technicianPlanDto.setRequest(request);
             technicianPlanDto.setApartment(request.getTenant().getApartment());
 
-            if (request.getRequestType().getPriority() == 4 && !(request.getRequestDate().after(start) && request.getRequestDate().before(end))) {
-                technicianPlanDto.setPriority(5);
+            if (request.getPriority() == 3 && !(request.getRequestDate().after(start) && request.getRequestDate().before(end))) {
+                technicianPlanDto.setPriority(4);
             }
 
             technicianPlanDtoList.add(technicianPlanDto);
@@ -137,7 +137,7 @@ public class RequestService {
             technicianPlanDto.setTenantId(request.getTenant().getId());
             technicianPlanDto.setRequestTypeId(request.getRequestType().getId());
             technicianPlanDto.setEstimateTime(request.getEstimateTime());
-            technicianPlanDto.setPriority(request.getRequestType().getPriority());
+            technicianPlanDto.setPriority(request.getPriority());
             technicianPlanDto.setRequest(request);
             technicianPlanDto.setApartment(request.getTenant().getApartment());
             technicianPlanDtoList.add(technicianPlanDto);

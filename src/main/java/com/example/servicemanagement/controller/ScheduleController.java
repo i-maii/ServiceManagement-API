@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.text.ParseException;
+import java.util.NoSuchElementException;
 
 @RestController
 @RequestMapping(value="/schedule")
@@ -16,5 +17,10 @@ public class ScheduleController {
     @GetMapping("/")
     public void getPossibleServiceRequest() throws ParseException {
         this.scheduleService.findRequestWithSpecificHour();
+    }
+
+    @GetMapping("/test")
+    public void test() throws NoSuchElementException {
+        this.scheduleService.findRoute();
     }
 }

@@ -1,7 +1,6 @@
 package com.example.servicemanagement.entity;
 
 import lombok.*;
-import org.apache.coyote.RequestInfo;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import javax.persistence.*;
@@ -32,4 +31,8 @@ public class Schedule {
     @OneToOne
     @JoinColumn(name = "apartment_id")
     private Apartment apartment;
+
+    private Integer sequence;
+
+    private Integer requestHour;
 }

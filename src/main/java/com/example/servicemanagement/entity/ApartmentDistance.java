@@ -21,5 +21,5 @@ public class ApartmentDistance {
 
     private Integer destination;
 
-    private Integer distance;
+    private double distance;
 }

@@ -41,4 +41,6 @@ public class Request {
     private Date requestDate;
 
     private Integer estimateTechnician;
+
+    private Integer priority;
 }

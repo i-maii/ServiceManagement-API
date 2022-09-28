@@ -29,6 +29,10 @@ public class TechnicianService {
         return this.technicianRepository.findTechnicianById(id);
     }
 
+    public List<Technician> getTechnicianByIds(List<Integer> id) {
+        return this.technicianRepository.findTechnicianByIdIn(id);
+    }
+
     public Technician getLowestTechnician() {
         return this.technicianRepository.findLowestTechnician();
     }
@@ -43,6 +47,10 @@ public class TechnicianService {
 
     public List<Integer> getPriorityRequestTypeOfLowestTechnician() {
         return this.technicianRepository.findPriorityRequestTypeOfLowestTechnician();
+    }
+
+    public List<Technician> getTechnicianSchedule() {
+        return this.technicianRepository.findTechnicianSchedule();
     }
 
     public boolean test() {
