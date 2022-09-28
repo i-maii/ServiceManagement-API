@@ -731,9 +731,6 @@ public class ScheduleService {
     }
 
     public void findRoute() throws NoSuchElementException {
-        int technician1TotalHour;
-        int technician2TotalHour;
-        int technician3TotalHour;
         int driver = this.scheduleRepository.findDriver();
         int technician1TargetHour = this.configService.getTechnician1TargetHourConfig();
         int technician2TargetHour = this.configService.getTechnician2TargetHourConfig();
@@ -743,15 +740,12 @@ public class ScheduleService {
             List<Schedule> allTaskList;
             List<Schedule> driverTaskList = new ArrayList<>();
             List<Technician> technicianListForAddRoute;
-            technician1TotalHour = this.scheduleRepository.findTotalHourByTechnicianId(1);
-            technician2TotalHour = this.scheduleRepository.findTotalHourByTechnicianId(2);
-            technician3TotalHour = this.scheduleRepository.findTotalHourByTechnicianId(3);
 
             // จำนวนชั่วโมงเท่ากันทุกคน
-            if (isTotalHourEqual(technician1TotalHour, technician1TargetHour, technician2TotalHour, technician2TargetHour, technician3TotalHour, technician3TargetHour)) {
+            if (isTotalHourEqual(technician1TargetHour, technician2TargetHour, technician3TargetHour)) {
                 List<Integer> oneApartmentIds = this.scheduleRepository.findOneApartmentIds();
                 int driverLatestApartmentId = this. scheduleRepository.findLatestApartmentIdByTechnicianId(driver);
-                int numOfTechnician = findNoOfTechnician(technician1TotalHour, technician1TargetHour, technician2TotalHour, technician2TargetHour, technician3TotalHour, technician3TargetHour);
+                int numOfTechnician = findNoOfTechnician(technician1TargetHour, technician2TargetHour, technician3TargetHour);
 
                 // มีช่างทำงานที่หอเดียว
                 if (!oneApartmentIds.isEmpty()) {
@@ -811,12 +805,12 @@ public class ScheduleService {
                         }
                     }
                 }
-                technicianListForAddRoute = findTechnicianForAddRoute(technician1TotalHour, technician1TargetHour, technician2TotalHour, technician2TargetHour, technician3TotalHour, technician3TargetHour);
+                technicianListForAddRoute = findTechnicianForAddRoute(technician1TargetHour, technician2TargetHour, technician3TargetHour);
             } else { // จำนวนชั่วโมงไม่เท่ากันทุกคน หรือ เท่ากันบางคน
-                allTaskList = findNextTask(driver, technician1TotalHour, technician1TargetHour, technician2TotalHour, technician2TargetHour, technician3TotalHour, technician3TargetHour);
+                allTaskList = findNextTask(driver, technician1TargetHour, technician2TargetHour, technician3TargetHour);
                 driverTaskList = allTaskList.stream().filter(sch -> sch.getTechnician().getId() == driver).toList();
                 List<Technician> technicianTaskList = allTaskList.stream().map(Schedule::getTechnician).distinct().toList();
-                technicianListForAddRoute = findTechnicianForAddRoute(technician1TotalHour, technician1TargetHour, technician2TotalHour, technician2TargetHour, technician3TotalHour, technician3TargetHour);
+                technicianListForAddRoute = findTechnicianForAddRoute(technician1TargetHour, technician2TargetHour, technician3TargetHour);
                 technicianListForAddRoute.removeIf(tech -> !technicianTaskList.contains(tech) && !tech.getId().equals(driver));
             }
 
@@ -837,17 +831,11 @@ public class ScheduleService {
             }
 
             if (!driverTaskList.isEmpty()) {
-                technician1TotalHour = this.scheduleRepository.findTotalHourByTechnicianId(1);
-                technician2TotalHour = this.scheduleRepository.findTotalHourByTechnicianId(2);
-                technician3TotalHour = this.scheduleRepository.findTotalHourByTechnicianId(3);
-                updateSequenceTaskForDriver(driverTaskList, driver, technician1TotalHour, technician1TargetHour, technician2TotalHour, technician2TargetHour, technician3TotalHour, technician3TargetHour);
+                updateSequenceTaskForDriver(driverTaskList, driver, technician1TargetHour, technician2TargetHour, technician3TargetHour);
             }
 
-            technician1TotalHour = this.scheduleRepository.findTotalHourByTechnicianId(1);
-            technician2TotalHour = this.scheduleRepository.findTotalHourByTechnicianId(2);
-            technician3TotalHour = this.scheduleRepository.findTotalHourByTechnicianId(3);
-            updateRoute(driver, technician1TotalHour, technician1TargetHour, technician2TotalHour, technician2TargetHour, technician3TotalHour, technician3TargetHour);
-        } while (isContinue(technician1TotalHour, technician1TargetHour, technician2TotalHour, technician2TargetHour, technician3TotalHour, technician3TargetHour));
+            updateRoute(driver, technician1TargetHour, technician2TargetHour, technician3TargetHour);
+        } while (isContinue(technician1TargetHour, technician2TargetHour, technician3TargetHour));
     }
 
     private List<Schedule> findNearestTaskExceptDriver(Integer driverLatestApartmentId, Integer driver) {
@@ -921,7 +909,11 @@ public class ScheduleService {
         }
     }
 
-    private void updateRoute(int driver, int technician1TotalHour, int technician1TargetHour, int technician2TotalHour, int technician2TargetHour, int technician3TotalHour, int technician3TargetHour) {
+    private void updateRoute(int driver, int technician1TargetHour, int technician2TargetHour, int technician3TargetHour) {
+        int technician1TotalHour = this.scheduleRepository.findTotalHourByTechnicianId(1);
+        int technician2TotalHour = this.scheduleRepository.findTotalHourByTechnicianId(2);
+        int technician3TotalHour = this.scheduleRepository.findTotalHourByTechnicianId(3);
+
         int technician1LatestApartmentId = this. scheduleRepository.findLatestApartmentIdByTechnicianId(1);
         int technician2LatestApartmentId = this. scheduleRepository.findLatestApartmentIdByTechnicianId(2);
         int technician3LatestApartmentId = this. scheduleRepository.findLatestApartmentIdByTechnicianId(3);
@@ -1150,7 +1142,11 @@ public class ScheduleService {
         }
     }
 
-    private void updateSequenceTaskForDriver(List<Schedule> taskList, int driver, int technician1TotalHour, int technician1TargetHour, int technician2TotalHour, int technician2TargetHour, int technician3TotalHour, int technician3TargetHour) {
+    private void updateSequenceTaskForDriver(List<Schedule> taskList, int driver, int technician1TargetHour, int technician2TargetHour, int technician3TargetHour) {
+        int technician1TotalHour = this.scheduleRepository.findTotalHourByTechnicianId(1);
+        int technician2TotalHour = this.scheduleRepository.findTotalHourByTechnicianId(2);
+        int technician3TotalHour = this.scheduleRepository.findTotalHourByTechnicianId(3);
+
         int diffHour = 0;
         // ช่าง 3 คน
         if (technician1TargetHour != 0 && technician2TargetHour != 0 && technician3TargetHour != 0) {
@@ -1252,7 +1248,11 @@ public class ScheduleService {
         }
     }
 
-    private int findNoOfTechnician(int technician1TotalHour, int technician1TargetHour, int technician2TotalHour, int technician2TargetHour, int technician3TotalHour, int technician3TargetHour) {
+    private int findNoOfTechnician(int technician1TargetHour, int technician2TargetHour, int technician3TargetHour) {
+        int technician1TotalHour = this.scheduleRepository.findTotalHourByTechnicianId(1);
+        int technician2TotalHour = this.scheduleRepository.findTotalHourByTechnicianId(2);
+        int technician3TotalHour = this.scheduleRepository.findTotalHourByTechnicianId(3);
+
         // ช่าง 3 คน
         int noOfTechnician = 0;
         if (technician1TargetHour != 0 && technician2TargetHour != 0 && technician3TargetHour != 0) {
@@ -1288,7 +1288,11 @@ public class ScheduleService {
         return 0;
     }
 
-    private List<Schedule> findNextTask(int driver, int technician1TotalHour, int technician1TargetHour, int technician2TotalHour, int technician2TargetHour, int technician3TotalHour, int technician3TargetHour) {
+    private List<Schedule> findNextTask(int driver, int technician1TargetHour, int technician2TargetHour, int technician3TargetHour) {
+        int technician1TotalHour = this.scheduleRepository.findTotalHourByTechnicianId(1);
+        int technician2TotalHour = this.scheduleRepository.findTotalHourByTechnicianId(2);
+        int technician3TotalHour = this.scheduleRepository.findTotalHourByTechnicianId(3);
+
         int diffHour = 0;
         int sameTechnicianId = 0;
         int driverLatestApartmentId = this. scheduleRepository.findLatestApartmentIdByTechnicianId(driver);
@@ -1443,7 +1447,11 @@ public class ScheduleService {
         return allTask;
     }
 
-    private boolean isContinue(int technician1TotalHour, int technician1TargetHour, int technician2TotalHour, int technician2TargetHour, int technician3TotalHour, int technician3TargetHour) {
+    private boolean isContinue(int technician1TargetHour, int technician2TargetHour, int technician3TargetHour) {
+        int technician1TotalHour = this.scheduleRepository.findTotalHourByTechnicianId(1);
+        int technician2TotalHour = this.scheduleRepository.findTotalHourByTechnicianId(2);
+        int technician3TotalHour = this.scheduleRepository.findTotalHourByTechnicianId(3);
+
         if (technician1TargetHour != 0 && technician2TargetHour != 0 && technician3TargetHour != 0) {
             return technician1TotalHour != technician1TargetHour || technician2TotalHour != technician2TargetHour || technician3TotalHour != technician3TargetHour;
         }
@@ -1462,7 +1470,11 @@ public class ScheduleService {
         }
     }
 
-    private List<Technician> findTechnicianForAddRoute(int technician1TotalHour, int technician1TargetHour, int technician2TotalHour, int technician2TargetHour, int technician3TotalHour, int technician3TargetHour) {
+    private List<Technician> findTechnicianForAddRoute(int technician1TargetHour, int technician2TargetHour, int technician3TargetHour) {
+        int technician1TotalHour = this.scheduleRepository.findTotalHourByTechnicianId(1);
+        int technician2TotalHour = this.scheduleRepository.findTotalHourByTechnicianId(2);
+        int technician3TotalHour = this.scheduleRepository.findTotalHourByTechnicianId(3);
+
         List<Technician> technicianIdList = new ArrayList<>();
         if (technician1TargetHour != 0 && technician2TargetHour != 0 && technician3TargetHour != 0) {
             if (technician1TotalHour != technician1TargetHour) {
@@ -1493,7 +1505,11 @@ public class ScheduleService {
         return technicianIdList;
     }
 
-    private boolean isTotalHourEqual(int technician1TotalHour, int technician1TargetHour, int technician2TotalHour, int technician2TargetHour, int technician3TotalHour, int technician3TargetHour) {
+    private boolean isTotalHourEqual(int technician1TargetHour, int technician2TargetHour, int technician3TargetHour) {
+        int technician1TotalHour = this.scheduleRepository.findTotalHourByTechnicianId(1);
+        int technician2TotalHour = this.scheduleRepository.findTotalHourByTechnicianId(2);
+        int technician3TotalHour = this.scheduleRepository.findTotalHourByTechnicianId(3);
+
         // ช่าง 3 คน
         if (technician1TargetHour != 0 && technician2TargetHour != 0 && technician3TargetHour != 0) {
             // ช่างคนที่ 1, 2 และ 3 ยังจัดเส้นทางไม่เสร็จ
