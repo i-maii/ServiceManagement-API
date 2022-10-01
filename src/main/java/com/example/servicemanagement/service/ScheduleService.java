@@ -5,6 +5,7 @@ import com.example.servicemanagement.entity.*;
 import com.example.servicemanagement.repository.ScheduleRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.text.ParseException;
 import java.util.*;
@@ -13,6 +14,7 @@ import java.util.function.Predicate;
 import static com.example.servicemanagement.constant.Constant.*;
 
 @Service
+@Transactional
 public class ScheduleService {
 
     private int totalApartment = 6;
@@ -42,6 +44,9 @@ public class ScheduleService {
     @Autowired
     ApartmentService apartmentService;
 
+    @Autowired
+    StgScheduleService stgScheduleService;
+
     public void findRequestWithSpecificHour() throws ParseException {
         this.configService.findConfiguration();
 
@@ -68,7 +73,7 @@ public class ScheduleService {
                     findRequire2TechnicianPlanFor3Technician(requestListForPlan, lowestRange, targetHour);
                 } else {
                     List<TechnicianPlanDto> require2RequestList = findRequire2RequestList(targetHour, requestListForPlan);
-                    findRequire2TechnicianPlanFor2Technician(require2RequestList, targetHour);
+                    findRequire2TechnicianPlanFor2Technician(require2RequestList, targetHour, 2, null);
                 }
             } else {
                 if (usageTechnician == 3) { //ใช้ช่าง 3 คน
@@ -85,9 +90,14 @@ public class ScheduleService {
                         planForTechnician1.add(requestList);
                         saveTechnicianPlan(planForTechnician1);
                     } else {
-                        findTechnicianPlanFor2Technician(targetHour, rangePriorityHour, requestList);
+                        findTechnicianPlanFor2Technician(targetHour, rangePriorityHour, requestList, 2, null);
                     }
                 }
+            }
+
+            boolean isAlreadyFindRoute = this.scheduleRepository.checkAlreadyFindRoute();
+            if (!isAlreadyFindRoute) {
+                findRoute();
             }
         }
     }
@@ -108,7 +118,7 @@ public class ScheduleService {
         return possibleLowestPlanList;
     }
 
-    private void findTechnicianPlanFor2Technician(Integer[] targetHour, Integer[] range, List<TechnicianPlanDto> requestList) {
+    private void findTechnicianPlanFor2Technician(Integer[] targetHour, Integer[] range, List<TechnicianPlanDto> requestList, int numOfTechnician, List<TechnicianPlanDto> technician3Plan) {
         List<TechnicianPlanDto> sortedRequestList = requestList.stream().sorted(Comparator.comparingInt(TechnicianPlanDto::getEstimateTime)).toList();
 
         totalApartment = 6;
@@ -136,15 +146,14 @@ public class ScheduleService {
                 }
             }
 
-            List<List<TechnicianPlanDto>> planList = new ArrayList<>();
             if (tempPossiblePlanListForTechnician1.size() > 1) {
-                this.routeService.checkBestRoute(tempPossiblePlanListForTechnician1, possiblePlanListForTechnician2);
+                checkBestRoute(tempPossiblePlanListForTechnician1, possiblePlanListForTechnician2, technician3Plan, false, numOfTechnician);
             } else {
+                List<List<TechnicianPlanDto>> planList = new ArrayList<>();
                 planList.addAll(tempPossiblePlanListForTechnician1);
                 planList.addAll(possiblePlanListForTechnician2);
+                saveTechnicianPlan(planList);
             }
-
-            saveTechnicianPlan(planList);
         } else {
             List<TechnicianPlanDto> planForTechnician2 = requestList.stream().filter(Predicate.not(possiblePlanListForTechnician1.get(0)::contains)).toList();
             possiblePlanListForTechnician1.add(planForTechnician2);
@@ -175,10 +184,10 @@ public class ScheduleService {
 
         Integer[] rangePriority = this.configService.getRangePriorityHour();
 
-        findTechnicianPlanFor2Technician(targetHour, rangePriority, bestRequest);
+        findTechnicianPlanFor2Technician(targetHour, rangePriority, bestRequest, 3, lowestTechnicianPlan);
     }
 
-    private void findRequire2TechnicianPlanFor2Technician(List<TechnicianPlanDto> allRequest, Integer[] targetHour) {
+    private void findRequire2TechnicianPlanFor2Technician(List<TechnicianPlanDto> allRequest, Integer[] targetHour, int numOfTechnician, List<TechnicianPlanDto> technician3Plan) {
         List<TechnicianPlanDto> requestList = allRequest.stream().filter(req -> req.getRequest().getEstimateTechnician() == 1).toList();
         List<TechnicianPlanDto> require2RequestList = allRequest.stream().filter(Predicate.not(requestList::contains)).toList();
         List<TechnicianPlanDto> sortedRequestList = requestList.stream().sorted(Comparator.comparingInt(TechnicianPlanDto::getEstimateTime)).toList();
@@ -215,14 +224,14 @@ public class ScheduleService {
             }
 
             if (tempPossiblePlanListForTechnician1.size() > 1) {
-                this.routeService.checkBestRoute(tempPossiblePlanListForTechnician1, possiblePlanListForTechnician2);
+                checkBestRoute(tempPossiblePlanListForTechnician1, possiblePlanListForTechnician2, technician3Plan, true, numOfTechnician);
+            } else {
+                List<List<TechnicianPlanDto>> planList = new ArrayList<>();
+                planList.add(tempPossiblePlanListForTechnician1.get(0));
+                planList.add(possiblePlanListForTechnician2.get(0));
+
+                saveTechnicianPlan(planList);
             }
-
-            List<List<TechnicianPlanDto>> planList = new ArrayList<>();
-            planList.add(tempPossiblePlanListForTechnician1.get(0));
-            planList.add(possiblePlanListForTechnician2.get(0));
-
-            saveTechnicianPlan(planList);
         } else {
             List<TechnicianPlanDto> planForTechnician1 = new ArrayList<>(require2RequestList);
             planForTechnician1.addAll(possiblePlanListForTechnician1.get(0));
@@ -257,7 +266,23 @@ public class ScheduleService {
         List<TechnicianPlanDto> lowestTechnicianPlan = possibleLowestPlanList.get(bestRequestPlanId);
         saveLowestTechnicianPlan(lowestTechnicianPlan);
 
-        findRequire2TechnicianPlanFor2Technician(bestRequest, targetHour);
+        findRequire2TechnicianPlanFor2Technician(bestRequest, targetHour, 3, lowestTechnicianPlan);
+    }
+
+    private void saveTechnicianPlanTemp(List<List<TechnicianPlanDto>> technicianPlanList) {
+        int index = 1;
+        for (List<TechnicianPlanDto> planList: technicianPlanList) {
+            for (TechnicianPlanDto plan: planList) {
+                Schedule schedule = new Schedule();
+                schedule.setRequest(plan.getRequest());
+                schedule.setApartment(plan.getApartment());
+                schedule.setTechnician(this.technicianService.getTechnicianById(index));
+                schedule.setRequestHour(plan.getRequest().getEstimateTime());
+                this.scheduleRepository.saveAndFlush(schedule);
+            }
+
+            index++;
+        }
     }
 
     private void saveTechnicianPlan(List<List<TechnicianPlanDto>> technicianPlanList) {
@@ -731,111 +756,161 @@ public class ScheduleService {
     }
 
     public void findRoute() throws NoSuchElementException {
-        int driver = this.scheduleRepository.findDriver();
         int technician1TargetHour = this.configService.getTechnician1TargetHourConfig();
         int technician2TargetHour = this.configService.getTechnician2TargetHourConfig();
         int technician3TargetHour = this.configService.getTechnician3TargetHourConfig();
+        boolean isRequire2 = this.scheduleRepository.checkHaveRequire2();
+
+        if (isRequire2) {
+            findRouteRequire2(technician1TargetHour, technician2TargetHour, technician3TargetHour);
+        } else {
+            findRouteRequire1(technician1TargetHour, technician2TargetHour, technician3TargetHour);
+        }
+    }
+
+    private void findRouteRequire2(int technician1TargetHour, int technician2TargetHour, int technician3TargetHour) {
+        int numOfTechnician = findNoOfTechnician(technician1TargetHour, technician2TargetHour, technician3TargetHour);
+        List<Integer> require2TechnicianId = this.scheduleRepository.findRequire2TechnicianId();
+
+        if (numOfTechnician == 3) {
+            this.stgScheduleService.prepareSchedule(require2TechnicianId);
+        }
+
+        int driver = this.scheduleRepository.findDriver();
+        boolean isMove = false;
+        do {
+            processFindRoute(technician1TargetHour, technician2TargetHour, technician3TargetHour, driver);
+
+            if (!isMove) {
+                boolean isRequire2Finished = this.scheduleRepository.checkRequire2Finished(require2TechnicianId);
+                if (isRequire2Finished) {
+                    this.stgScheduleService.prepareRequire1Schedule();
+                    isMove = true;
+                }
+            }
+        } while (isContinue(technician1TargetHour, technician2TargetHour, technician3TargetHour));
+    }
+
+    private void findRouteRequire1(int technician1TargetHour, int technician2TargetHour, int technician3TargetHour) {
+        int driver = this.scheduleRepository.findDriver();
 
         do {
-            List<Schedule> allTaskList;
-            List<Schedule> driverTaskList = new ArrayList<>();
-            List<Technician> technicianListForAddRoute;
+            processFindRoute(technician1TargetHour, technician2TargetHour, technician3TargetHour, driver);
+        } while (isContinue(technician1TargetHour, technician2TargetHour, technician3TargetHour));
+    }
 
-            // จำนวนชั่วโมงเท่ากันทุกคน
-            if (isTotalHourEqual(technician1TargetHour, technician2TargetHour, technician3TargetHour)) {
-                List<Integer> oneApartmentIds = this.scheduleRepository.findOneApartmentIds();
-                int driverLatestApartmentId = this. scheduleRepository.findLatestApartmentIdByTechnicianId(driver);
-                int numOfTechnician = findNoOfTechnician(technician1TargetHour, technician2TargetHour, technician3TargetHour);
+    private void processFindRoute(int technician1TargetHour, int technician2TargetHour, int technician3TargetHour, int driver) {
+        List<Schedule> allTaskList;
+        List<Technician> technicianListForAddRoute;
+        List<Schedule> driverTaskList = new ArrayList<>();
+        // จำนวนชั่วโมงเท่ากันทุกคน
+        if (isTotalHourEqual(technician1TargetHour, technician2TargetHour, technician3TargetHour)) {
+            List<Integer> oneApartmentIds = this.scheduleRepository.findOneApartmentIds(driver);
+            int driverLatestApartmentId = this.scheduleRepository.findLatestApartmentIdByTechnicianId(driver);
+            int numOfTechnician = findNoOfTechnician(technician1TargetHour, technician2TargetHour, technician3TargetHour);
 
-                // มีช่างทำงานที่หอเดียว
-                if (!oneApartmentIds.isEmpty()) {
-                    allTaskList = this.scheduleRepository.findSchedulesNearestOneApartment(driverLatestApartmentId, oneApartmentIds);
+            // มีช่างทำงานที่หอเดียว
+            if (!oneApartmentIds.isEmpty()) {
+                allTaskList = this.scheduleRepository.findSchedulesNearestOneApartment(driverLatestApartmentId, oneApartmentIds);
 
-                    boolean isAllHaveSameApartment = allTaskList.stream().map(Schedule::getTechnician).distinct().toList().size() == numOfTechnician;
-                    boolean driverHaveSameApartment = !allTaskList.stream().filter(sch -> sch.getTechnician().getId().equals(driver)).toList().isEmpty() && !allTaskList.stream().filter(sch -> !sch.getTechnician().getId().equals(driver)).toList().isEmpty();
-                    // filter list เอางานของช่างที่เป็นคนขับออก
-                    // case1: ช่าง 3 คน A ทำงานที่หอเดียว, B และ C ไม่มีงานที่หอนี้
-                    // case2: ช่าง 2 คน A ทำงานที่หอเดียว, B เป็นคนขับไม่มีงานที่หอนี้
+                boolean isAllHaveSameApartment = allTaskList.stream().map(Schedule::getTechnician).distinct().toList().size() == numOfTechnician;
+                // filter list เอางานของช่างที่เป็นคนขับออก
+                // isAllHaveSameApartment = false && driverHaveSameApartment = false
+                // case1: ช่าง 3 คน A ทำงานที่หอเดียว, B เป็นคนขับไม่มีงานที่หอนี้, C มีงานที่หอนี้
+                // case2: ช่าง 3 คน A ทำงานที่หอเดียว, B และ C ไม่มีงานที่หอนี้
+                // case3: ช่าง 2 คน A ทำงานที่หอเดียว, B เป็นคนขับไม่มีงานที่หอนี้
 
-                    // ใช้ oneApartmentTaskList เดิม
-                    // case1: ช่าง 3 คน A ทำงานที่หอเดียว, B เป็นคนขับไม่มีงานที่หอนี้, C มีงานที่หอนี้
-                    // case2: ช่าง 3 คน A ทำงานที่หอเดียว, B และ C มีงานที่หอนี้
-                    // case3: ช่าง 2 คน A ทำงานที่หอเดียว, B เป็นคนขับมีงานที่หอนี้
 
-                    if (!isAllHaveSameApartment || driverHaveSameApartment) {
-                        allTaskList.removeIf(tech -> tech.getTechnician().getId().equals(driver));
-                    } else {
-                        driverTaskList = allTaskList.stream().filter(sch -> sch.getTechnician().getId().equals(driver)).toList();
-                    }
-                } else { // ไม่มีช่างที่ทำงานที่หอเดียว
-                    List<Integer> sameApartmentIds = this.scheduleRepository.findSameApartmentIds(numOfTechnician);
-                    // มีช่างทำงานที่หอเดียวกันทุกคน
-                    // case1-1: ช่าง 3 คน A, B และ C มีงานที่หอเดียวกัน (B เป็นคนขับ)
-                    // case1-2: ช่าง 3 คน A และ C มีงานที่หอเดียวกัน B ไม่มีงานที่หอนั้น (B เป็นคนขับ)
-                    // case1-3: ช่าง 2 คน A และ B มีงานที่หอเดียวกัน
+                // ใช้ allTaskList เดิม
+                // isAllHaveSameApartment = true ดึงงานคนขับใส่ driverTaskList
+                // case2: ช่าง 3 คน A ทำงานที่หอเดียว, B และ C มีงานที่หอนี้
+                // case3: ช่าง 2 คน A ทำงานที่หอเดียว, B เป็นคนขับมีงานที่หอนี้
 
-                    // ไม่มีช่างทำงานที่หอเดียวกัน
-                    // case2-1: ช่าง 3 คน A, B และ C ไม่มีงานที่หอเดียวกัน (B เป็นคนขับ)
-                    // case2-2: ช่าง 3 คน A และ B มีงานที่หอเดียวกัน C ไม่มีงานที่หอนั้น (B เป็นคนขับ)
-                    // case2-3: ช่าง 2 คน A และ B ไม่มีงานที่หอเดียวกัน
+                if (isAllHaveSameApartment) {
+                    driverTaskList = allTaskList.stream().filter(sch -> sch.getTechnician().getId().equals(driver)).toList();
+                } else {
+                    allTaskList.removeIf(tech -> tech.getTechnician().getId().equals(driver));
+                }
+            } else { // ไม่มีช่างที่ทำงานที่หอเดียว
+                List<Integer> sameApartmentIds = this.scheduleRepository.findSameApartmentIds(numOfTechnician);
+                // มีช่างทำงานที่หอเดียวกันทุกคน
+                // case1-1: ช่าง 3 คน A, B และ C มีงานที่หอเดียวกัน (B เป็นคนขับ)
+                // case1-2: ช่าง 3 คน A และ C มีงานที่หอเดียวกัน B ไม่มีงานที่หอนั้น (B เป็นคนขับ)
+                // case1-3: ช่าง 2 คน A และ B มีงานที่หอเดียวกัน
 
-                    // มีช่างทำงานที่หอเดียวกันทั้งหมด
-                    // case1-1: ช่าง 3 คน A, B และ C มีงานที่หอเดียวกัน (B เป็นคนขับ)
-                    // case1-3: ช่าง 2 คน A และ B มีงานที่หอเดียวกัน
-                    if (!sameApartmentIds.isEmpty()) {
-                        allTaskList = this.scheduleRepository.findSchedulesNearestOneApartment(driverLatestApartmentId, sameApartmentIds);
-                        driverTaskList = allTaskList.stream().filter(sch -> sch.getTechnician().getId().equals(driver)).toList();
-                    } else { // ไม่มีช่างทำงานที่หอเดียวกันทุกคน
-                        if (numOfTechnician == 3) {
-                            sameApartmentIds = this.scheduleRepository.findSameApartmentIds(numOfTechnician - 1);
-                            if (!sameApartmentIds.isEmpty()) {
-                                boolean isDriverHaveSameApartment = this.scheduleRepository.checkDriverHaveSameApartment(sameApartmentIds, driver);
+                // ไม่มีช่างทำงานที่หอเดียวกัน
+                // case2-1: ช่าง 3 คน A, B และ C ไม่มีงานที่หอเดียวกัน (B เป็นคนขับ)
+                // case2-2: ช่าง 3 คน A และ B มีงานที่หอเดียวกัน C ไม่มีงานที่หอนั้น (B เป็นคนขับ)
+                // case2-3: ช่าง 2 คน A และ B ไม่มีงานที่หอเดียวกัน
 
-                                if (isDriverHaveSameApartment) { // case2-2: ช่าง 3 คน A และ B มีงานที่หอเดียวกัน C ไม่มีงานที่หอนั้น (B เป็นคนขับ)
-                                    allTaskList = findNearestTaskExceptDriver(driverLatestApartmentId, driver);
+                // มีช่างทำงานที่หอเดียวกันทั้งหมด
+                // case1-1: ช่าง 3 คน A, B และ C มีงานที่หอเดียวกัน (B เป็นคนขับ)
+                // case1-3: ช่าง 2 คน A และ B มีงานที่หอเดียวกัน
+                if (!sameApartmentIds.isEmpty()) {
+                    allTaskList = this.scheduleRepository.findSchedulesNearestOneApartment(driverLatestApartmentId, sameApartmentIds);
+                    driverTaskList = allTaskList.stream().filter(sch -> sch.getTechnician().getId().equals(driver)).toList();
+                } else { // ไม่มีช่างทำงานที่หอเดียวกันทุกคน
+                    if (numOfTechnician == 3) {
+                        sameApartmentIds = this.scheduleRepository.findSameApartmentIds(numOfTechnician - 1);
+                        if (!sameApartmentIds.isEmpty()) {
+                            boolean isDriverHaveSameApartment = this.scheduleRepository.checkDriverHaveSameApartment(sameApartmentIds, driver);
 
-                                } else { // case1-2: ช่าง 3 คน A และ C มีงานที่หอเดียวกัน B ไม่มีงานที่หอนั้น (B เป็นคนขับ)
-                                    allTaskList = this.scheduleRepository.findSchedulesNearestOneApartment(driverLatestApartmentId, sameApartmentIds);
-                                }
-                            } else { // case2-1: ช่าง 3 คน A, B และ C ไม่มีงานที่หอเดียวกัน (B เป็นคนขับ)
+                            if (isDriverHaveSameApartment) { // case2-2: ช่าง 3 คน A และ B มีงานที่หอเดียวกัน C ไม่มีงานที่หอนั้น (B เป็นคนขับ)
                                 allTaskList = findNearestTaskExceptDriver(driverLatestApartmentId, driver);
+
+                            } else { // case1-2: ช่าง 3 คน A และ C มีงานที่หอเดียวกัน B ไม่มีงานที่หอนั้น (B เป็นคนขับ)
+                                allTaskList = this.scheduleRepository.findSchedulesNearestOneApartment(driverLatestApartmentId, sameApartmentIds);
                             }
-                        } else { // case2-3: ช่าง 2 คน A และ B ไม่มีงานที่หอเดียวกัน
+                        } else { // case2-1: ช่าง 3 คน A, B และ C ไม่มีงานที่หอเดียวกัน (B เป็นคนขับ)
                             allTaskList = findNearestTaskExceptDriver(driverLatestApartmentId, driver);
                         }
+                    } else { // case2-3: ช่าง 2 คน A และ B ไม่มีงานที่หอเดียวกัน
+                        allTaskList = findNearestTaskExceptDriver(driverLatestApartmentId, driver);
                     }
                 }
-                technicianListForAddRoute = findTechnicianForAddRoute(technician1TargetHour, technician2TargetHour, technician3TargetHour);
-            } else { // จำนวนชั่วโมงไม่เท่ากันทุกคน หรือ เท่ากันบางคน
-                allTaskList = findNextTask(driver, technician1TargetHour, technician2TargetHour, technician3TargetHour);
-                driverTaskList = allTaskList.stream().filter(sch -> sch.getTechnician().getId() == driver).toList();
-                List<Technician> technicianTaskList = allTaskList.stream().map(Schedule::getTechnician).distinct().toList();
-                technicianListForAddRoute = findTechnicianForAddRoute(technician1TargetHour, technician2TargetHour, technician3TargetHour);
-                technicianListForAddRoute.removeIf(tech -> !technicianTaskList.contains(tech) && !tech.getId().equals(driver));
+            }
+            technicianListForAddRoute = findTechnicianForAddRoute(technician1TargetHour, technician2TargetHour, technician3TargetHour);
+        } else { // จำนวนชั่วโมงไม่เท่ากันทุกคน หรือ เท่ากันบางคน
+            allTaskList = findNextTask(driver, technician1TargetHour, technician2TargetHour, technician3TargetHour);
+            driverTaskList = allTaskList.stream().filter(sch -> sch.getTechnician().getId() == driver).toList();
+            List<Technician> technicianTaskList = allTaskList.stream().map(Schedule::getTechnician).distinct().toList();
+            technicianListForAddRoute = findTechnicianForAddRoute(technician1TargetHour, technician2TargetHour, technician3TargetHour);
+            technicianListForAddRoute.removeIf(tech -> !technicianTaskList.contains(tech) && !tech.getId().equals(driver));
+        }
+
+        int nextApartment = allTaskList.get(0).getApartment().getId();
+        for (Technician technician: technicianListForAddRoute) {
+            // ไปที่หอ ...
+            int latestApartment = this.scheduleRepository.findLatestApartmentIdByTechnicianId(technician.getId());
+            boolean canWalk = this.apartmentDistanceService.checkCanWalk(latestApartment, nextApartment);
+
+            // ถ้าเดินได้ และในรายการไม่มี driver ไม่ต้องใส่เส้นทางให้ driver
+            if (canWalk && driverTaskList.isEmpty() && technician.getId().equals(driver)) {
+                continue;
             }
 
-            for (Technician technician: technicianListForAddRoute) {
-                // ไปที่หอ ...
+            // ถ้า nextApartment != จุดที่อยู่ปัจจุบัน ใส่เส้นทาง
+            if (nextApartment != latestApartment) {
                 Schedule schedule = new Schedule();
                 schedule.setTechnician(technician);
                 schedule.setApartment(allTaskList.get(0).getApartment());
                 schedule.setSequence(this.scheduleRepository.findLatestSequenceByTechnicianId(technician.getId()) + 1);
                 this.scheduleRepository.saveAndFlush(schedule);
+            }
 
-                if (!technician.getId().equals(driver)) {
-                    List<Schedule> taskList = allTaskList.stream().filter(sch -> sch.getTechnician() == technician).toList();
-                    if (!taskList.isEmpty()) {
-                        updateSequenceTask(taskList);
-                    }
+            if (!technician.getId().equals(driver)) {
+                List<Schedule> taskList = allTaskList.stream().filter(sch -> sch.getTechnician() == technician).toList();
+                if (!taskList.isEmpty()) {
+                    updateSequenceTask(taskList);
                 }
             }
+        }
 
-            if (!driverTaskList.isEmpty()) {
-                updateSequenceTaskForDriver(driverTaskList, driver, technician1TargetHour, technician2TargetHour, technician3TargetHour);
-            }
+        if (!driverTaskList.isEmpty()) {
+            updateSequenceTaskForDriver(driverTaskList, driver, technician1TargetHour, technician2TargetHour, technician3TargetHour);
+        }
 
-            updateRoute(driver, technician1TargetHour, technician2TargetHour, technician3TargetHour);
-        } while (isContinue(technician1TargetHour, technician2TargetHour, technician3TargetHour));
+        updateRoute(driver, technician1TargetHour, technician2TargetHour, technician3TargetHour);
     }
 
     private List<Schedule> findNearestTaskExceptDriver(Integer driverLatestApartmentId, Integer driver) {
@@ -851,6 +926,23 @@ public class ScheduleService {
     }
 
     private List<Schedule> findDriverAndOtherNearestTask(Integer latestApartmentId, Integer driver, Integer other, Integer[] hour) {
+        boolean isOtherOneApartment = this.scheduleRepository.checkOtherOneApartment(other);
+        if (isOtherOneApartment) {
+            return this.scheduleRepository.findSchedulesByTechnicianIdAndSequenceIsNull(other);
+        }
+
+        List<Integer> sameApartmentId = this.scheduleRepository.findDriverAndOtherSameApartment(Arrays.asList(driver, other));
+        if (sameApartmentId != null) {
+            List<Schedule> taskList = this.scheduleRepository.findSchedulesNearestOneApartmentByTechnician(latestApartmentId, sameApartmentId, Arrays.asList(driver, other));
+            List<Schedule> driverTask = taskList.stream().filter(sch -> sch.getTechnician().getId().equals(driver)).toList();
+            int otherHour = hour[1] + taskList.stream().mapToInt(Schedule::getRequestHour).sum();
+            int diffHour = Math.min(otherHour, hour[0]) - hour[1];
+
+            taskList.addAll(findMatchHourByDiffHour(driverTask, diffHour));
+
+            return taskList;
+        }
+
         int apartmentId = this.scheduleRepository.findNearestApartmentIdByTechnicianId(latestApartmentId, other);
         List<Integer> technicianId = Arrays.asList(driver, other);
         List<Schedule> taskList = this.scheduleRepository.findSchedulesByApartmentIdAndTechnicianIdInAndSequenceIsNull(apartmentId, technicianId);
@@ -967,8 +1059,13 @@ public class ScheduleService {
                                 firstRoute = technician3LatestApartmentId;
                             }
                             // ช่างคนที่ 1 และ 3 อยู่หอเดียวกัน แต่ช่างคนที่ 2 อยู่คนละหอ
-                            if (technician1LatestApartmentId == technician3LatestApartmentId && technician2LatestApartmentId != technician3LatestApartmentId) {
+                            if (technician1LatestApartmentId == technician3LatestApartmentId && technician3LatestApartmentId != technician2LatestApartmentId) {
                                 firstTechnicianIds.addAll(Arrays.asList(1, 3));
+                                firstRoute = technician2LatestApartmentId;
+                            }
+                            // ช่างคนที่ 2 และ 3 อยู่หอเดียวกัน แต่ช่างคนที่ 1 อยู่คนละหอ
+                            if (technician2LatestApartmentId == technician3LatestApartmentId && technician3LatestApartmentId != technician1LatestApartmentId) {
+                                firstTechnicianIds.add(1);
                                 firstRoute = technician2LatestApartmentId;
                             }
                         }
@@ -1001,21 +1098,26 @@ public class ScheduleService {
 
                                 if (firstRoute == technician1LatestApartmentId) {
                                     secondRoute = technician3LatestApartmentId;
-                                    secondTechnicianIds.addAll(Arrays.asList(2, 3));
+                                    secondTechnicianIds.addAll(Arrays.asList(2, 1));
                                 } else {
                                     secondRoute = technician1LatestApartmentId;
-                                    secondTechnicianIds.addAll(Arrays.asList(2, 1));
+                                    secondTechnicianIds.addAll(Arrays.asList(2, 3));
                                 }
                             }
                             // ช่างคนที่ 2 และ 1 อยู่หอเดียวกัน แต่ช่างคนที่ 3 อยู่คนละหอ
-                            if (technician2LatestApartmentId == technician1LatestApartmentId && technician2LatestApartmentId != technician3LatestApartmentId) {
+                            if (technician2LatestApartmentId == technician1LatestApartmentId && technician1LatestApartmentId != technician3LatestApartmentId) {
                                 firstTechnicianIds.addAll(Arrays.asList(2, 1));
                                 firstRoute = technician3LatestApartmentId;
                             }
                             // ช่างคนที่ 2 และ 3 อยู่หอเดียวกัน แต่ช่างคนที่ 1 อยู่คนละหอ
-                            if (technician2LatestApartmentId == technician3LatestApartmentId && technician2LatestApartmentId != technician1LatestApartmentId) {
+                            if (technician2LatestApartmentId == technician3LatestApartmentId && technician3LatestApartmentId != technician1LatestApartmentId) {
                                 firstTechnicianIds.addAll(Arrays.asList(2, 3));
                                 firstRoute = technician1LatestApartmentId;
+                            }
+                            // ช่างคนที่ 3 และ 1 อยู่หอเดียวกัน แต่ช่างคนที่ 2 อยู่คนละหอ
+                            if (technician3LatestApartmentId == technician1LatestApartmentId && technician1LatestApartmentId != technician2LatestApartmentId) {
+                                firstTechnicianIds.add(2);
+                                firstRoute = technician3LatestApartmentId;
                             }
                         }
                         break;
@@ -1047,20 +1149,25 @@ public class ScheduleService {
 
                                 if (firstRoute == technician1LatestApartmentId) {
                                     secondRoute = technician2LatestApartmentId;
-                                    secondTechnicianIds.addAll(Arrays.asList(3, 2));
+                                    secondTechnicianIds.addAll(Arrays.asList(3, 1));
                                 } else {
                                     secondRoute = technician1LatestApartmentId;
-                                    secondTechnicianIds.addAll(Arrays.asList(3, 1));
+                                    secondTechnicianIds.addAll(Arrays.asList(3, 2));
                                 }
                             }
                             // ช่างคนที่ 3 และ 1 อยู่หอเดียวกัน แต่ช่างคนที่ 2 อยู่คนละหอ
-                            if (technician3LatestApartmentId == technician1LatestApartmentId && technician3LatestApartmentId != technician2LatestApartmentId) {
+                            if (technician3LatestApartmentId == technician1LatestApartmentId && technician1LatestApartmentId != technician2LatestApartmentId) {
                                 firstTechnicianIds.addAll(Arrays.asList(3, 1));
                                 firstRoute = technician2LatestApartmentId;
                             }
                             // ช่างคนที่ 3 และ 2 อยู่หอเดียวกัน แต่ช่างคนที่ 1 อยู่คนละหอ
-                            if (technician3LatestApartmentId == technician2LatestApartmentId && technician3LatestApartmentId != technician1LatestApartmentId) {
+                            if (technician3LatestApartmentId == technician2LatestApartmentId && technician2LatestApartmentId != technician1LatestApartmentId) {
                                 firstTechnicianIds.addAll(Arrays.asList(3, 2));
+                                firstRoute = technician1LatestApartmentId;
+                            }
+                            // ช่างคนที่ 1 และ 2 อยู่หอเดียวกัน แต่ช่างคนที่ 3 อยู่คนละหอ
+                            if (technician1LatestApartmentId == technician2LatestApartmentId && technician2LatestApartmentId != technician3LatestApartmentId) {
+                                firstTechnicianIds.add(3);
                                 firstRoute = technician1LatestApartmentId;
                             }
                         }
@@ -1331,6 +1438,11 @@ public class ScheduleService {
                             hour[0] = technician3TotalHour;
                             hour[1] = technician1TotalHour;
                         }
+                        // (2 = 3) > 1
+                        if (technician2TotalHour == technician3TotalHour && technician3TotalHour > technician1TotalHour) {
+                            diffHour = technician3TotalHour - technician1TotalHour;
+                            isDriverLowest = true;
+                        }
                         break;
                     case 2:
                         // คนที่ 2 เป็นคนขับ
@@ -1358,6 +1470,11 @@ public class ScheduleService {
                             hour[0] = technician3TotalHour;
                             hour[1] = technician2TotalHour;
                         }
+                        // (1 = 3) > 2
+                        if (technician1TotalHour == technician3TotalHour && technician3TotalHour > technician2TotalHour) {
+                            diffHour = technician3TotalHour - technician2TotalHour;
+                            isDriverLowest = true;
+                        }
                         break;
                     case 3:
                         // คนที่ 3 เป็นคนขับ
@@ -1384,6 +1501,11 @@ public class ScheduleService {
                             sameTechnicianId = 1;
                             hour[0] = technician2TotalHour;
                             hour[1] = technician3TotalHour;
+                        }
+                        // (1 = 2) > 3
+                        if (technician1TotalHour == technician2TotalHour && technician2TotalHour > technician3TotalHour) {
+                            diffHour = technician2TotalHour - technician3TotalHour;
+                            isDriverLowest = true;
                         }
                         break;
                 }
@@ -1561,5 +1683,44 @@ public class ScheduleService {
 
         // ช่าง 1 คน
         return true;
+    }
+
+    private void checkBestRoute(List<List<TechnicianPlanDto>> technician1Plan, List<List<TechnicianPlanDto>> technician2Plan, List<TechnicianPlanDto> technician3Plan, boolean isRequire2, int numOfTechnician) {
+        int technician1TargetHour = this.configService.getTechnician1TargetHourConfig();
+        int technician2TargetHour = this.configService.getTechnician2TargetHourConfig();
+        int technician3TargetHour = this.configService.getTechnician3TargetHourConfig();
+        int maxRoute = Integer.MAX_VALUE;
+
+        for (int i = 0; i < technician1Plan.size(); i++) {
+            this.stgScheduleService.deleteSchedule();
+
+            List<List<TechnicianPlanDto>> tempPlan = new ArrayList<>();
+            tempPlan.add(technician1Plan.get(i));
+            tempPlan.add(technician2Plan.get(i));
+
+            if (technician3Plan != null) {
+                tempPlan.add(technician3Plan);
+            }
+
+            saveTechnicianPlanTemp(tempPlan);
+
+            if (isRequire2) {
+                findRouteRequire2(technician1TargetHour, technician2TargetHour, technician3TargetHour);
+            } else {
+                findRouteRequire1(technician1TargetHour, technician2TargetHour, technician3TargetHour);
+            }
+
+            int noOfRoute = this.scheduleRepository.findNumberOfRoute();
+
+            if (noOfRoute < maxRoute) {
+                this.stgScheduleService.truncateStgSchedule();
+                this.stgScheduleService.saveToTemp();
+                maxRoute = noOfRoute;
+            }
+
+            this.stgScheduleService.deleteSchedule();
+        }
+
+        this.stgScheduleService.saveBestRequest();
     }
 }

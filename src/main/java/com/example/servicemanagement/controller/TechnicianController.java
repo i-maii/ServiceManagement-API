@@ -20,9 +20,4 @@ public class TechnicianController {
     public List<Technician> getAllTechnician() {
         return this.technicianService.getAllTechnician();
     }
-
-    @GetMapping("/test")
-    public boolean test() {
-        return this.technicianService.test();
-    }
 }

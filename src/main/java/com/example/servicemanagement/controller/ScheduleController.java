@@ -18,9 +18,4 @@ public class ScheduleController {
     public void getPossibleServiceRequest() throws ParseException {
         this.scheduleService.findRequestWithSpecificHour();
     }
-
-    @GetMapping("/test")
-    public void test() throws NoSuchElementException {
-        this.scheduleService.findRoute();
-    }
 }

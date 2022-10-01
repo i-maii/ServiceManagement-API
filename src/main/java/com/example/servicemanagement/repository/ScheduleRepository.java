@@ -24,19 +24,21 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Integer> {
             "FROM SCHEDULE s " +
             "GROUP BY technician_id " +
             "ORDER BY COUNT(DISTINCT apartment_id) DESC " +
-            "LIMIT 0, 1")
+            "LIMIT 1")
     Integer findDriver();
 
     @Query(nativeQuery = true, value = "SELECT DISTINCT s.apartment_id " +
             "FROM SCHEDULE s " +
-            "WHERE s.technician_id IN ( " +
+            "WHERE s.technician_id IN (" +
             "   SELECT s2.technician_id " +
             "   FROM SCHEDULE s2 " +
-            "   GROUP BY s2.technician_id, s2.`sequence` " +
-            "   HAVING COUNT(DISTINCT s2.apartment_id) = 1 AND s2.`sequence` IS NULL " +
+            "   WHERE s2.`sequence` IS NULL " +
+            "   GROUP BY s2.technician_id " +
+            "   HAVING COUNT(DISTINCT s2.apartment_id) = 1 " +
+            "   AND s2.technician_id != :driver " +
             ") " +
-            "AND s.`sequence` IS NULL")
-    List<Integer> findOneApartmentIds();
+            "AND `sequence` IS NULL")
+    List<Integer> findOneApartmentIds(@Param("driver") Integer driver);
 
     @Query(nativeQuery = true, value = "SELECT * " +
             "FROM SCHEDULE s " +
@@ -49,6 +51,19 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Integer> {
             ") AS nearest ON s.apartment_id = nearest.destination AND nearest.`start` = :start " +
             "WHERE s.`sequence` IS NULL")
     List<Schedule> findSchedulesNearestOneApartment(@Param("start") Integer start, @Param("destination") List<Integer> destination);
+
+    @Query(nativeQuery = true, value = "SELECT * " +
+            "FROM SCHEDULE s " +
+            "INNER JOIN ( " +
+            "   SELECT * " +
+            "   FROM APARTMENT_DISTANCE ad " +
+            "   WHERE ad.`start` = :start AND ad.destination IN :destination" +
+            "   ORDER BY ad.distance ASC " +
+            "   LIMIT 1 " +
+            ") AS nearest ON s.apartment_id = nearest.destination AND nearest.`start` = :start " +
+            "WHERE s.`sequence` IS NULL " +
+            "AND s.technician_id IN :technician_id")
+    List<Schedule> findSchedulesNearestOneApartmentByTechnician(@Param("start") Integer start, @Param("destination") List<Integer> destination, @Param("technician_id") List<Integer> technicianId);
 
     @Query(nativeQuery = true, value = "SELECT apartment_id " +
             "FROM SCHEDULE s " +
@@ -86,6 +101,8 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Integer> {
 
     List<Schedule> findSchedulesByApartmentIdAndSequenceIsNull(Integer apartmentId);
 
+    List<Schedule> findSchedulesByTechnicianIdAndSequenceIsNull(Integer technicianId);
+
     List<Schedule> findSchedulesByApartmentIdAndTechnicianIdAndSequenceIsNull(Integer apartmentId, Integer technicianId);
 
     List<Schedule> findSchedulesByApartmentIdAndTechnicianIdInAndSequenceIsNull(Integer apartmentId, List<Integer> technicianId);
@@ -96,12 +113,21 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Integer> {
             "AND s.`sequence` IS NOT NULL")
     Integer findTotalHourByTechnicianId(@Param("technician_id") Integer technicianId);
 
-    @Query(nativeQuery = true, value = "SELECT COUNT(*) > 0 " +
+    @Query(nativeQuery = true, value = "SELECT CASE WHEN COUNT(*) > 0 THEN 'true' ELSE 'false' END " +
             "FROM SCHEDULE s " +
             "WHERE apartment_id IN :apartment_id " +
             "AND s.`sequence` IS NULL " +
             "AND technician_id = :technician_id")
     boolean checkDriverHaveSameApartment(@Param("apartment_id") List<Integer> apartmentId, @Param("technician_id") Integer technicianId);
+
+    @Query(nativeQuery = true, value = "SELECT CASE WHEN COUNT(*) > 0 THEN 'true' ELSE 'false' END " +
+            "FROM SCHEDULE s " +
+            "WHERE request_id IN ( " +
+            "   SELECT id " +
+            "   FROM REQUEST r " +
+            "   WHERE estimate_technician = 2 " +
+            ")")
+    boolean checkHaveRequire2();
 
     @Query(nativeQuery = true, value = "SELECT DISTINCT technician_id " +
             "FROM SCHEDULE s " +
@@ -110,5 +136,39 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Integer> {
             "   FROM REQUEST r " +
             "   WHERE estimate_technician = 2 " +
             ")")
-    List<Integer> findTechniciansRequire2();
+    List<Integer> findRequire2TechnicianId();
+
+    @Query(nativeQuery = true, value = "SELECT CASE WHEN COUNT(*) = 0 THEN 'true' ELSE 'false' END " +
+            "FROM SCHEDULE s " +
+            "WHERE technician_id IN :technician_id " +
+            "AND `sequence` IS NULL")
+    boolean checkRequire2Finished(@Param("technician_id") List<Integer> technicianId);
+
+    @Query(nativeQuery = true, value = "SELECT CASE WHEN COUNT(DISTINCT apartment_id) = 1 THEN 'true' ELSE 'false' END " +
+            "FROM SCHEDULE s " +
+            "WHERE `sequence` IS NULL " +
+            "AND technician_id = :technician_id " +
+            "GROUP BY technician_id")
+    boolean checkOtherOneApartment(@Param("technician_id") Integer technicianId);
+
+    @Query(nativeQuery = true, value = "SELECT apartment_id " +
+            "FROM SCHEDULE s " +
+            "WHERE `sequence` IS NULL " +
+            "AND technician_id IN :technician_id " +
+            "GROUP BY apartment_id " +
+            "HAVING COUNT(DISTINCT technician_id) = 2")
+    List<Integer> findDriverAndOtherSameApartment(@Param("technician_id") List<Integer> technicianId);
+
+    @Query(nativeQuery = true, value = "SELECT COUNT(*) " +
+            "FROM SCHEDULE s " +
+            "GROUP BY technician_id, request_id " +
+            "HAVING request_id IS NULL " +
+            "ORDER BY COUNT(*) DESC " +
+            "LIMIT 1")
+    Integer findNumberOfRoute();
+
+    @Query(nativeQuery = true, value = "SELECT CASE WHEN COUNT(*) > 1 THEN 'true' ELSE 'false' END " +
+            "FROM SCHEDULE s " +
+            "WHERE `sequence` IS NOT NULL")
+    boolean checkAlreadyFindRoute();
 }

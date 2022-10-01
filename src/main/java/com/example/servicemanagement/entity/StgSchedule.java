@@ -1,6 +1,9 @@
 package com.example.servicemanagement.entity;
 
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import javax.persistence.*;
@@ -8,27 +11,27 @@ import java.util.Date;
 
 @Entity
 @EntityListeners(AuditingEntityListener.class)
-@Table(name = "SCHEDULE")
+@Table(name = "STG_SCHEDULE")
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
-public class Schedule {
+public class StgSchedule {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @OneToOne(cascade = CascadeType.MERGE)
+    @OneToOne
     @JoinColumn(name = "technician_id")
     private Technician technician;
 
-    @OneToOne(cascade = CascadeType.MERGE)
+    @OneToOne
     @JoinColumn(name = "request_id")
     private Request request;
 
     private Date serviceDateTime;
 
-    @OneToOne(cascade = CascadeType.MERGE)
+    @OneToOne
     @JoinColumn(name = "apartment_id")
     private Apartment apartment;
 
