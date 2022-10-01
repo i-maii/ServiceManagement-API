@@ -2,6 +2,7 @@ package com.example.servicemanagement.service;
 
 import com.example.servicemanagement.dto.TechnicianPlanDto;
 import com.example.servicemanagement.entity.Request;
+import com.example.servicemanagement.entity.RequestType;
 import com.example.servicemanagement.repository.RequestRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -21,19 +22,37 @@ public class RequestService {
     @Autowired
     TechnicianService technicianService;
 
+    @Autowired
+    RequestTypeService requestTypeService;
+
+    @Autowired
+    TenantService tenantService;
+
     public Request getRequestById(Integer id) {
         return this.requestRepository.findRequestById(id);
     }
+
     public List<Request> getRequestByStatus(String status) {
         return this.requestRepository.findRequestsByStatus(status);
     }
 
-    public Integer getTotalRequestHour() {
-        List<Request> allRequest = getRequestByStatus(STATUS_READY_FOR_PLAN);
-        return allRequest.stream().map(Request::getEstimateTime).mapToInt(Integer::intValue).sum();
+    public List<Request> getAllRequestForPlanning() {
+        List<RequestType> requestTypes = this.requestTypeService.getRequestTypeForTechnician();
+        return this.requestRepository.findRequestsByStatusAndRequestTypeIn(STATUS_READY_FOR_PLAN, requestTypes);
     }
 
-    public Integer getLowestTotalHour() {
+    public Integer getTotalRequestHour(List<Request> allRequest, boolean require2Technician) {
+        int sum = 0;
+
+        if (require2Technician) {
+            sum += allRequest.stream().filter(req -> req.getEstimateTechnician() > 1).map(Request::getEstimateTime).mapToInt(Integer::intValue).sum();
+        }
+        sum += allRequest.stream().map(Request::getEstimateTime).mapToInt(Integer::intValue).sum();
+
+        return sum;
+    }
+
+    public Integer getLowestTotalRequestHour() {
         List<Request> lowestRequest = getLowestRequest();
 
         return lowestRequest.stream().map(Request::getEstimateTime).mapToInt(Integer::intValue).sum();
@@ -46,28 +65,35 @@ public class RequestService {
         return lowestRequest.stream().map(TechnicianPlanDto::getEstimateTime).mapToInt(Integer::intValue).sum();
     }
 
-    public Integer getTotalPriorityHour() {
-        List<Request> allRequest = getRequestByStatus(STATUS_READY_FOR_PLAN);
-        return allRequest.stream().filter(req -> MOST_PRIORITY.contains(req.getRequestType().getPriority())).map(Request::getEstimateTime).mapToInt(Integer::intValue).sum();
+    public Integer getTotalPriorityHour(List<Request> allRequest, boolean require2Technician) {
+        int sum = 0;
+
+        if (require2Technician) {
+            sum += allRequest.stream().filter(req -> MOST_PRIORITY.contains(req.getPriority()) && req.getEstimateTechnician() > 1).map(Request::getEstimateTime).mapToInt(Integer::intValue).sum();
+        }
+        sum += allRequest.stream().filter(req -> MOST_PRIORITY.contains(req.getPriority())).map(Request::getEstimateTime).mapToInt(Integer::intValue).sum();
+
+        return sum;
     }
 
     public Integer getLowestTotalPriorityHour() {
         List<Request> allRequest = getLowestRequest();
-        List<Integer> priorityRequestType = this.technicianService.getPriorityRequestTypeOfLowestTechnician();
-        return allRequest.stream().filter(req -> priorityRequestType.contains(req.getRequestType().getPriority())).map(Request::getEstimateTime).mapToInt(Integer::intValue).sum();
+        List<Integer> priorityRequestType = Arrays.asList(1, 2, 3);
+
+        return allRequest.stream().filter(req -> priorityRequestType.contains(req.getRequestType().getId())).map(Request::getEstimateTime).mapToInt(Integer::intValue).sum();
     }
 
     public List<TechnicianPlanDto> getLowestRequest(List<TechnicianPlanDto> allRequest) {
         List<Integer> requestTypeList = this.technicianService.getAllRequestTypeOfLowestTechnician();
 
-        return allRequest.stream().filter(req -> requestTypeList.contains(req.getRequestTypeId())).toList();
+        return allRequest.stream().filter(req -> requestTypeList.contains(req.getRequestTypeId()) && req.getRequest().getEstimateTechnician() == 1).toList();
     }
 
     public List<Request> getLowestRequest() {
         List<Integer> requestTypeList = this.technicianService.getAllRequestTypeOfLowestTechnician();
         List<Request> allRequest = getRequestByStatus(STATUS_READY_FOR_PLAN);
 
-        return allRequest.stream().filter(req -> requestTypeList.contains(req.getRequestType().getId())).toList();
+        return allRequest.stream().filter(req -> requestTypeList.contains(req.getRequestType().getId()) && req.getEstimateTechnician() == 1).toList();
     }
 
     public void updateRequestStatusReadyToService(Request request) {
@@ -88,12 +114,12 @@ public class RequestService {
             technicianPlanDto.setTenantId(request.getTenant().getId());
             technicianPlanDto.setRequestTypeId(request.getRequestType().getId());
             technicianPlanDto.setEstimateTime(request.getEstimateTime());
-            technicianPlanDto.setPriority(request.getRequestType().getPriority());
+            technicianPlanDto.setPriority(request.getPriority());
             technicianPlanDto.setRequest(request);
             technicianPlanDto.setApartment(request.getTenant().getApartment());
 
-            if (request.getRequestType().getPriority() == 4 && !(request.getRequestDate().after(start) && request.getRequestDate().before(end))) {
-                technicianPlanDto.setPriority(5);
+            if (request.getPriority() == 3 && !(request.getRequestDate().after(start) && request.getRequestDate().before(end))) {
+                technicianPlanDto.setPriority(4);
             }
 
             technicianPlanDtoList.add(technicianPlanDto);
@@ -111,7 +137,7 @@ public class RequestService {
             technicianPlanDto.setTenantId(request.getTenant().getId());
             technicianPlanDto.setRequestTypeId(request.getRequestType().getId());
             technicianPlanDto.setEstimateTime(request.getEstimateTime());
-            technicianPlanDto.setPriority(request.getRequestType().getPriority());
+            technicianPlanDto.setPriority(request.getPriority());
             technicianPlanDto.setRequest(request);
             technicianPlanDto.setApartment(request.getTenant().getApartment());
             technicianPlanDtoList.add(technicianPlanDto);
@@ -130,6 +156,10 @@ public class RequestService {
         Date end = dateRange[1];
 
         return requestList.stream().anyMatch(request -> (request.getRequestDate().after(start) && request.getRequestDate().before(end)));
+    }
+
+    public boolean checkRequire2Technician(List<Request> allRequest) {
+        return allRequest.stream().anyMatch(req -> req.getEstimateTechnician() > 1);
     }
 
     private Date[] getLastWeekRange() throws ParseException {
@@ -155,9 +185,24 @@ public class RequestService {
         boolean haveOlderRequest = checkOlderRequest(requestList, dates[0], dates[1]);
 
         if (haveOlderRequest) {
-            return Arrays.asList(1, 2, 3, 4);
+            return Arrays.asList(1, 2, 3);
         }
 
-        return Arrays.asList(1, 2, 3);
+        return Arrays.asList(1, 2);
+    }
+
+    public void createRequest(Request request) {
+        request.setStatus(STATUS_READY_FOR_ESTIMATION);
+
+        this.requestRepository.saveAndFlush(request);
+    }
+
+    public List<Request> getRequestListByTenantId(Integer id) {
+        return this.requestRepository.findRequestsByTenantId(id);
+    }
+
+    public void updateRequest(Integer id, Request request) {
+        request.setId(id);
+        this.requestRepository.saveAndFlush(request);
     }
 }

@@ -39,4 +39,8 @@ public class Request {
     private Integer estimateTime;
 
     private Date requestDate;
+
+    private Integer estimateTechnician;
+
+    private Integer priority;
 }

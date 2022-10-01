@@ -4,8 +4,8 @@ import java.util.Arrays;
 import java.util.List;
 
 public class Constant {
-    public static List<Integer> MOST_PRIORITY = Arrays.asList(1, 2, 3);
-    public static List<Integer> ALL_PRIORITY = Arrays.asList(1, 2, 3, 4);
+    public static List<Integer> MOST_PRIORITY = Arrays.asList(1, 2);
+    public static List<Integer> ALL_PRIORITY = Arrays.asList(1, 2, 3);
 
     public static String KEY_TOTAL_REQUEST_HOUR = "KEY_TOTAL_REQUEST_HOUR";
     public static String KEY_TOTAL_TARGET_HOUR = "KEY_TOTAL_TARGET_HOUR";
@@ -19,7 +19,10 @@ public class Constant {
     public static String KEY_LOWEST_PRIORITY_HOUR_MAX = "KEY_LOWEST_PRIORITY_HOUR_MAX";
     public static String KEY_TOTAL_PRIORITY_HOUR = "KEY_TOTAL_PRIORITY_HOUR";
     public static String KEY_LOWEST_TOTAL_PRIORITY_HOUR = "KEY_LOWEST_TOTAL_PRIORITY_HOUR";
+    public static String KEY_LOWEST_TOTAL_REQUEST_HOUR = "KEY_LOWEST_TOTAL_REQUEST_HOUR";
 
-    public static String STATUS_READY_TO_SERVICE = "READY TO SERVICE";
+    public static String STATUS_READY_FOR_ESTIMATION = "READY_FOR_ESTIMATION";
     public static String STATUS_READY_FOR_PLAN = "READY FOR PLAN";
+    public static String STATUS_READY_TO_SERVICE = "READY TO SERVICE";
+    public static String STATUS_DONE = "DONE";
 }

@@ -10,6 +10,7 @@ public interface TechnicianRepository extends JpaRepository<Technician, Integer>
     int countTechnicianByAvailable(boolean isAvailable);
     List<Technician> findTechniciansByAvailable(boolean isAvailable);
     Technician findTechnicianById(Integer id);
+    List<Technician> findTechnicianByIdIn(List<Integer> id);
 
     @Query(nativeQuery = true, value = "SELECT t.* FROM TECHNICIAN t WHERE t.id = (SELECT ta.technician_id FROM TECHNICIAN_ABILITIES ta GROUP BY ta.technician_id ORDER BY COUNT(*) ASC LIMIT 1)")
     Technician findLowestTechnician();
@@ -30,4 +31,7 @@ public interface TechnicianRepository extends JpaRepository<Technician, Integer>
             "LIMIT 1 )\n" +
             "AND rt.priority IN (1, 2)")
     List<Integer> findPriorityRequestTypeOfLowestTechnician();
+
+    @Query(nativeQuery = true, value = "SELECT * FROM TECHNICIAN t WHERE t.id IN (SELECT DISTINCT s.technician_id FROM SCHEDULE s)")
+    List<Technician> findTechnicianSchedule();
 }
