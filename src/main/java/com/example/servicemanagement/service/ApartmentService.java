@@ -5,6 +5,8 @@ import com.example.servicemanagement.repository.ApartmentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class ApartmentService {
     @Autowired
@@ -12,6 +14,10 @@ public class ApartmentService {
 
     public Apartment getApartmentById(Integer id) {
         return this.apartmentRepository.findApartmentById(id);
+    }
+
+    public List<Apartment> getAll() {
+        return this.apartmentRepository.findAll();
     }
 
     public Apartment getPreviousApartmentByTechnicianId(Integer technicianId) {

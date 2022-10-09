@@ -15,7 +15,7 @@ public class TechnicianPlanDto {
     private Integer requestId;
     private Integer requestTypeId;
     private Integer apartmentId;
-    private Integer tenantId;
+    private Integer userId;
     private Integer priority;
     private Integer estimateTime;
 

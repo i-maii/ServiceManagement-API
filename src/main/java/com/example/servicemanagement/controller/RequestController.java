@@ -23,7 +23,7 @@ public class RequestController {
 
     @PostMapping("/")
     public void createRequest(
-            @RequestBody Request body
+            @RequestBody RequestDto body
     ) {
         this.requestService.createRequest(body);
     }
@@ -36,11 +36,11 @@ public class RequestController {
         this.requestService.updateRequest(id, body);
     }
 
-    @GetMapping("/{id}")
-    public List<Request> getAllRequestById(
-            @PathVariable("id") Integer tenantId
+    @GetMapping("/{userId}")
+    public List<Request> getAllRequestByUserId(
+            @PathVariable("userId") Integer userId
     ) {
-        return this.requestService.getRequestListByTenantId(tenantId);
+        return this.requestService.getRequestListByUserId(userId);
     }
 
     @GetMapping("/status/ready-for-estimation")

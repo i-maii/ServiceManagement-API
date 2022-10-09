@@ -13,4 +13,8 @@ public class TenantService {
     public Tenant getTenantById(Integer id) {
         return this.tenantRepository.findTenantById(id);
     }
+
+    public Tenant getTenantByUserId(Integer userId) {
+        return this.tenantRepository.findTenantByUserId(userId);
+    }
 }

@@ -23,8 +23,12 @@ public class Request {
     private RequestType requestType;
 
     @OneToOne
-    @JoinColumn(name = "tenant_id")
-    private Tenant tenant;
+    @JoinColumn(name = "user_id")
+    private User user;
+
+    @OneToOne
+    @JoinColumn(name = "apartment_id")
+    private Apartment apartment;
 
     private String name;
 
@@ -33,8 +37,6 @@ public class Request {
     private String status;
 
     private String detail;
-
-    private String image;
 
     private Integer estimateTime;
 

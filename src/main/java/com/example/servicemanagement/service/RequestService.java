@@ -1,6 +1,8 @@
 package com.example.servicemanagement.service;
 
+import com.example.servicemanagement.dto.RequestDto;
 import com.example.servicemanagement.dto.TechnicianPlanDto;
+import com.example.servicemanagement.entity.Apartment;
 import com.example.servicemanagement.entity.Request;
 import com.example.servicemanagement.entity.RequestType;
 import com.example.servicemanagement.repository.RequestRepository;
@@ -27,6 +29,12 @@ public class RequestService {
 
     @Autowired
     TenantService tenantService;
+
+    @Autowired
+    UserService userService;
+
+    @Autowired
+    ApartmentService apartmentService;
 
     public Request getRequestById(Integer id) {
         return this.requestRepository.findRequestById(id);
@@ -110,13 +118,13 @@ public class RequestService {
         requestList.forEach(request -> {
             TechnicianPlanDto technicianPlanDto = new TechnicianPlanDto();
             technicianPlanDto.setRequestId(request.getId());
-            technicianPlanDto.setApartmentId(request.getTenant().getApartment().getId());
-            technicianPlanDto.setTenantId(request.getTenant().getId());
+            technicianPlanDto.setApartmentId(request.getApartment().getId());
+            technicianPlanDto.setUserId(request.getUser().getId());
             technicianPlanDto.setRequestTypeId(request.getRequestType().getId());
             technicianPlanDto.setEstimateTime(request.getEstimateTime());
             technicianPlanDto.setPriority(request.getPriority());
             technicianPlanDto.setRequest(request);
-            technicianPlanDto.setApartment(request.getTenant().getApartment());
+            technicianPlanDto.setApartment(request.getApartment());
 
             if (request.getPriority() == 3 && !(request.getRequestDate().after(start) && request.getRequestDate().before(end))) {
                 technicianPlanDto.setPriority(4);
@@ -133,13 +141,13 @@ public class RequestService {
         requestList.forEach(request -> {
             TechnicianPlanDto technicianPlanDto = new TechnicianPlanDto();
             technicianPlanDto.setRequestId(request.getId());
-            technicianPlanDto.setApartmentId(request.getTenant().getApartment().getId());
-            technicianPlanDto.setTenantId(request.getTenant().getId());
+            technicianPlanDto.setApartmentId(request.getApartment().getId());
+            technicianPlanDto.setUserId(request.getUser().getId());
             technicianPlanDto.setRequestTypeId(request.getRequestType().getId());
             technicianPlanDto.setEstimateTime(request.getEstimateTime());
             technicianPlanDto.setPriority(request.getPriority());
             technicianPlanDto.setRequest(request);
-            technicianPlanDto.setApartment(request.getTenant().getApartment());
+            technicianPlanDto.setApartment(request.getApartment());
             technicianPlanDtoList.add(technicianPlanDto);
         });
 
@@ -191,14 +199,32 @@ public class RequestService {
         return Arrays.asList(1, 2);
     }
 
-    public void createRequest(Request request) {
+    public void createRequest(RequestDto dto) {
+        Request request = new Request();
+        request.setRequestType(this.requestTypeService.getRequestTypeById(dto.getRequestTypeId()));
+        request.setUser(this.userService.getById(dto.getUserId()));
+        Integer apartmentId = dto.getApartmentId();
+        Apartment apartment;
+        if (apartmentId == null) {
+            apartment = this.tenantService.getTenantByUserId(dto.getUserId()).getApartment();
+        } else {
+            apartment = this.apartmentService.getApartmentById(apartmentId);
+        }
+        request.setApartment(apartment);
+        request.setName(dto.getName());
+        request.setPhoneNo(dto.getPhoneNo());
+        request.setDetail(dto.getDetail());
+        request.setPriority(request.getRequestType().getPriority());
+        request.setRequestDate(new Date());
+        request.setEstimateTime(0);
+        request.setEstimateTechnician(0);
         request.setStatus(STATUS_READY_FOR_ESTIMATION);
 
         this.requestRepository.saveAndFlush(request);
     }
 
-    public List<Request> getRequestListByTenantId(Integer id) {
-        return this.requestRepository.findRequestsByTenantId(id);
+    public List<Request> getRequestListByUserId(Integer userId) {
+        return this.requestRepository.findRequestsByUserIdOrderByRequestDateDesc(userId);
     }
 
     public void updateRequest(Integer id, Request request) {

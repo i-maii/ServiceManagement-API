@@ -14,4 +14,8 @@ public class UserService {
     public User login(String username, String password) {
         return this.userRepository.findUserByUsernameAndPassword(username, password);
     }
+
+    public User getById(Integer userId) {
+        return this.userRepository.findUserById(userId);
+    }
 }

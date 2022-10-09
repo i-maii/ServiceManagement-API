@@ -9,11 +9,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
-public class RequestDto {
-    private Integer requestTypeId;
-    private Integer userId;
+public class RequestTypeDto {
+    private Integer Id;
     private String name;
-    private String phoneNo;
-    private String detail;
-    private Integer apartmentId;
 }
