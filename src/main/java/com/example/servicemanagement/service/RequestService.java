@@ -294,4 +294,38 @@ public class RequestService {
 
         this.requestRepository.saveAndFlush(request);
     }
+
+    public List<RequestListDto> getAdminRequestList() {
+        List<RequestType> requestTypes = this.requestTypeService.getRequestTypeByRole("admin");
+        List<Request> requestList = this.requestRepository.findRequestsByStatusAndRequestTypeIn(STATUS_READY_TO_SERVICE, requestTypes);
+        Map<Apartment, List<Request>> r = requestList.stream().collect(Collectors.groupingBy(Request::getApartment));
+
+        List<RequestListDto> requestListDtos = new ArrayList<>();
+        for (Apartment apartment: r.keySet()) {
+            RequestListDto requestListDto = new RequestListDto();
+            requestListDto.setApartmentName(apartment.getName());
+
+            List<RequestItemDto> requestItemDtos = new ArrayList<>();
+            for (Request request: r.get(apartment)) {
+                RequestItemDto requestItemDto = new RequestItemDto();
+                Tenant tenant = this.tenantService.getTenantByUserId(request.getUser().getId());
+                requestItemDto.setRequestId(request.getId());
+                requestItemDto.setRoomNo(tenant.getRoomNo());
+                requestItemDto.setRequestType(request.getRequestType().getName());
+                requestItemDtos.add(requestItemDto);
+            }
+
+            requestListDto.setRequestList(requestItemDtos);
+            requestListDtos.add(requestListDto);
+        }
+
+        return requestListDtos;
+    }
+
+    public void closeTask(Integer requestId) {
+        Request request = this.requestRepository.findRequestById(requestId);
+        request.setStatus(STATUS_DONE);
+
+        this.requestRepository.saveAndFlush(request);
+    }
 }

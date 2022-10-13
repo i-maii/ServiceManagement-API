@@ -1,20 +1,15 @@
 package com.example.servicemanagement.controller;
 
 import com.example.servicemanagement.dto.*;
-import com.example.servicemanagement.entity.Apartment;
 import com.example.servicemanagement.entity.Request;
 import com.example.servicemanagement.repository.RequestRepository;
 import com.example.servicemanagement.service.RequestService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
-import static com.example.servicemanagement.constant.Constant.*;
+import static com.example.servicemanagement.constant.Constant.STATUS_READY_FOR_PLAN;
 
 @RestController
 @RequestMapping(value="/request")
@@ -68,9 +63,16 @@ public class RequestController {
         this.requestService.updateEstimate(requestId, body);
     }
 
-    @GetMapping("/test")
-    public List<Request> getAll(
+    @GetMapping("/admin")
+    public List<RequestListDto> getAdminRequestList(
     ) {
-        return this.requestService.getAllRequestForPlanning();
+        return this.requestService.getAdminRequestList();
+    }
+
+    @PostMapping("/{id}/close")
+    public void closeTask(
+            @PathVariable("id") Integer requestId
+    ) {
+        this.requestService.closeTask(requestId);
     }
 }
