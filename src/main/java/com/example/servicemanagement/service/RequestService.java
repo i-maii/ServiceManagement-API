@@ -1,10 +1,7 @@
 package com.example.servicemanagement.service;
 
-import com.example.servicemanagement.dto.RequestDto;
-import com.example.servicemanagement.dto.TechnicianPlanDto;
-import com.example.servicemanagement.entity.Apartment;
-import com.example.servicemanagement.entity.Request;
-import com.example.servicemanagement.entity.RequestType;
+import com.example.servicemanagement.dto.*;
+import com.example.servicemanagement.entity.*;
 import com.example.servicemanagement.repository.RequestRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -12,6 +9,7 @@ import org.springframework.stereotype.Service;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static com.example.servicemanagement.constant.Constant.*;
 
@@ -42,6 +40,39 @@ public class RequestService {
 
     public List<Request> getRequestByStatus(String status) {
         return this.requestRepository.findRequestsByStatus(status);
+    }
+
+    public List<Request> getRequestByStatusList(List<String> statusList) {
+        return this.requestRepository.findRequestsByStatusIn(statusList);
+    }
+
+    public List<EstimateDto> getAllEstimateRequest() {
+        List<Request> requestList = getRequestByStatusList(Arrays.asList(STATUS_READY_FOR_ESTIMATION, STATUS_READY_FOR_PLAN));
+        Map<Apartment, List<Request>> r = requestList.stream().collect(Collectors.groupingBy(Request::getApartment));
+
+        List<EstimateDto> estimateList = new ArrayList<>();
+        for (Apartment apartment: r.keySet()) {
+            EstimateDto estimate = new EstimateDto();
+            estimate.setApartmentName(apartment.getName());
+
+            List<EstimateRequestDto> estimateRequestList = new ArrayList<>();
+            for (Request request: r.get(apartment)) {
+                EstimateRequestDto estimateRequest = new EstimateRequestDto();
+                Tenant tenant = this.tenantService.getTenantByUserId(request.getUser().getId());
+                estimateRequest.setRequestId(request.getId());
+                estimateRequest.setRoomNo(tenant.getRoomNo());
+                estimateRequest.setRequestType(request.getRequestType().getName());
+                estimateRequest.setPriority(request.getPriority());
+                estimateRequest.setEstimateTechnician(request.getEstimateTechnician());
+                estimateRequest.setEstimateTime(request.getEstimateTime());
+                estimateRequestList.add(estimateRequest);
+            }
+
+            estimate.setRequestList(estimateRequestList);
+            estimateList.add(estimate);
+        }
+
+        return estimateList;
     }
 
     public List<Request> getAllRequestForPlanning() {
@@ -218,7 +249,12 @@ public class RequestService {
         request.setRequestDate(new Date());
         request.setEstimateTime(0);
         request.setEstimateTechnician(0);
-        request.setStatus(STATUS_READY_FOR_ESTIMATION);
+
+        if (request.getRequestType().getRole().getName().equals("technician")) {
+            request.setStatus(STATUS_READY_FOR_ESTIMATION);
+        } else {
+            request.setStatus(STATUS_READY_FOR_PLAN);
+        }
 
         this.requestRepository.saveAndFlush(request);
     }
@@ -229,6 +265,33 @@ public class RequestService {
 
     public void updateRequest(Integer id, Request request) {
         request.setId(id);
+        this.requestRepository.saveAndFlush(request);
+    }
+
+    public EstimateValueDto getEstimateValue() {
+        List<RequestType> requestTypes = this.requestTypeService.getRequestTypeByRole("technician");
+        List<Integer> priority = requestTypes.stream().map(RequestType::getPriority).distinct().toList();
+        List<Integer> time = Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8);
+        List<Technician> technicians = this.technicianService.getAllTechnician();
+        List<Integer> technician = new ArrayList<>();
+        for (int i=1; i<=technicians.size(); i++) {
+            technician.add(i);
+        }
+
+        EstimateValueDto estimateValueDto = new EstimateValueDto();
+        estimateValueDto.setPriority(priority);
+        estimateValueDto.setTime(time);
+        estimateValueDto.setTechnician(technician);
+
+        return estimateValueDto;
+    }
+
+    public void updateEstimate(Integer requestId, UpdateEstimateValueDto dto) {
+        Request request = this.getRequestById(requestId);
+        request.setEstimateTechnician(dto.getTechnician());
+        request.setEstimateTime(dto.getTime());
+        request.setPriority(dto.getPriority());
+
         this.requestRepository.saveAndFlush(request);
     }
 }
