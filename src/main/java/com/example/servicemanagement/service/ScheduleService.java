@@ -1,5 +1,6 @@
 package com.example.servicemanagement.service;
 
+import com.example.servicemanagement.dto.ScheduleDto;
 import com.example.servicemanagement.dto.TechnicianPlanDto;
 import com.example.servicemanagement.entity.*;
 import com.example.servicemanagement.repository.ScheduleRepository;
@@ -46,6 +47,9 @@ public class ScheduleService {
 
     @Autowired
     StgScheduleService stgScheduleService;
+
+    @Autowired
+    TenantService tenantService;
 
     public void findRequestWithSpecificHour() throws ParseException {
         this.configService.findConfiguration();
@@ -1722,5 +1726,85 @@ public class ScheduleService {
         }
 
         this.stgScheduleService.saveBestRequest();
+    }
+
+//    public List<RequestListDto> getScheduleByUserId(Integer userId) {
+//        Technician technician = this.technicianService.getTechnicianByUserId(userId);
+//        List<Schedule> schedules = this.scheduleRepository.findSchedulesByTechnicianIdOrderBySequence(technician.getId());
+//
+//        List<RequestListDto> requestListDtos = new ArrayList<>();
+//        List<RequestItemDto> requestItemDtos = new ArrayList<>();
+//        String apartmentName = schedules.get(0).getApartment().getName();
+//        for (Schedule schedule: schedules) {
+//            RequestListDto requestListDto = new RequestListDto();
+//            if (!apartmentName.equals(schedule.getApartment().getName())){
+//                if (!requestItemDtos.isEmpty()) {
+//                    requestListDto.setApartmentName(apartmentName);
+//                    requestListDto.setRequestList(requestItemDtos);
+//                    requestListDtos.add(requestListDto);
+//
+//                    requestItemDtos = new ArrayList<>();
+//                    requestListDto = new RequestListDto();
+//                }
+//
+//                apartmentName = schedule.getApartment().getName();
+//            }
+//
+//            if (schedule.getRequest() == null) {
+//                requestListDto.setApartmentName(schedule.getApartment().getName());
+//                requestListDto.setRequestList(new ArrayList<>());
+//                requestListDtos.add(requestListDto);
+//            } else {
+//                requestListDto.setApartmentName(schedule.getApartment().getName());
+//                RequestItemDto requestItemDto = new RequestItemDto();
+//                requestItemDto.setRequestId(schedule.getRequest().getId());
+//                requestItemDto.setRequestType(schedule.getRequest().getRequestType().getName());
+//                Tenant tenant = this.tenantService.getTenantByUserId(schedule.getRequest().getUser().getId());
+//                requestItemDto.setRoomNo(tenant.getRoomNo());
+//
+//                requestItemDtos.add(requestItemDto);
+//            }
+//        }
+//        RequestListDto requestListDto = new RequestListDto();
+//        requestListDto.setApartmentName(apartmentName);
+//        requestListDto.setRequestList(requestItemDtos);
+//        requestListDtos.add(requestListDto);
+//
+//        return requestListDtos;
+//    }
+
+    public List<ScheduleDto> getScheduleByUserId(Integer userId) {
+        Technician technician = this.technicianService.getTechnicianByUserId(userId);
+        List<Schedule> schedules = this.scheduleRepository.findSchedulesByTechnicianIdOrderBySequence(technician.getId());
+
+        List<ScheduleDto> scheduleDtos = new ArrayList<>();
+        for (Schedule schedule: schedules) {
+            ScheduleDto scheduleDto = new ScheduleDto();
+            scheduleDto.setId(schedule.getId());
+            if (schedule.getRequest() != null) {
+                scheduleDto.setRequestId(schedule.getRequest().getId());
+                Tenant tenant = this.tenantService.getTenantByUserId(schedule.getRequest().getUser().getId());
+                scheduleDto.setRoomNo(tenant.getRoomNo());
+                scheduleDto.setRequestType(schedule.getRequest().getRequestType().getName());
+            }
+            scheduleDto.setApartmentName(schedule.getApartment().getName());
+
+            scheduleDtos.add(scheduleDto);
+        }
+
+        return scheduleDtos;
+    }
+
+    public void closeTask(Integer scheduleId, Integer requestId) {
+        Schedule schedule = this.scheduleRepository.findScheduleById(scheduleId);
+        this.scheduleRepository.closeTask(schedule.getTechnician().getId(), schedule.getSequence());
+
+        List<Schedule> schedules = this.scheduleRepository.findSchedulesByRequestId(requestId);
+        if (schedules.isEmpty()) {
+            Request request = this.requestService.getRequestById(requestId);
+            request.setStatus(STATUS_DONE);
+
+            this.requestService.updateRequest(requestId, request);
+        }
     }
 }

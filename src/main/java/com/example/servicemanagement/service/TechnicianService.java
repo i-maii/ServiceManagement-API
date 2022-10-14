@@ -52,4 +52,8 @@ public class TechnicianService {
     public List<Technician> getTechnicianSchedule() {
         return this.technicianRepository.findTechnicianSchedule();
     }
+
+    public Technician getTechnicianByUserId(Integer userId) {
+        return this.technicianRepository.findTechnicianByUserId(userId);
+    }
 }

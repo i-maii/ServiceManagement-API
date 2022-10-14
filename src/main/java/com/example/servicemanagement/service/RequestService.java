@@ -253,7 +253,7 @@ public class RequestService {
         if (request.getRequestType().getRole().getName().equals("technician")) {
             request.setStatus(STATUS_READY_FOR_ESTIMATION);
         } else {
-            request.setStatus(STATUS_READY_FOR_PLAN);
+            request.setStatus(STATUS_READY_TO_SERVICE);
         }
 
         this.requestRepository.saveAndFlush(request);

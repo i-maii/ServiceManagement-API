@@ -2,6 +2,7 @@ package com.example.servicemanagement.repository;
 
 import com.example.servicemanagement.entity.Schedule;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -171,4 +172,14 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Integer> {
             "FROM SCHEDULE s " +
             "WHERE `sequence` IS NOT NULL")
     boolean checkAlreadyFindRoute();
+
+    List<Schedule> findSchedulesByTechnicianIdOrderBySequence(Integer technicianId);
+
+    List<Schedule> findSchedulesByRequestId(Integer requestId);
+
+    @Modifying
+    @Query(nativeQuery = true, value = "DELETE FROM SCHEDULE WHERE technician_id = :technician_id AND `sequence` <= :sequence")
+    int closeTask(@Param("technician_id") Integer technicianId, @Param("sequence") Integer sequence);
+
+    Schedule findScheduleById(Integer requestId);
 }

@@ -34,4 +34,6 @@ public interface TechnicianRepository extends JpaRepository<Technician, Integer>
 
     @Query(nativeQuery = true, value = "SELECT * FROM TECHNICIAN t WHERE t.id IN (SELECT DISTINCT s.technician_id FROM SCHEDULE s)")
     List<Technician> findTechnicianSchedule();
+
+    Technician findTechnicianByUserId(Integer userId);
 }
