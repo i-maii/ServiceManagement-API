@@ -1313,8 +1313,8 @@ public class ScheduleService {
                     totalHour += task.getRequestHour();
                     if (totalHour >= diffHour) {
                         if (totalHour > diffHour) {
-                            int updateHour = totalHour - diffHour;
-                            int createHour = task.getRequestHour() - updateHour;
+                            int createHour = totalHour - diffHour;
+                            int updateHour = task.getRequestHour() - createHour;
                             task.setRequestHour(updateHour);
                             this.scheduleRepository.saveAndFlush(task);
 
@@ -1694,6 +1694,7 @@ public class ScheduleService {
         int technician2TargetHour = this.configService.getTechnician2TargetHourConfig();
         int technician3TargetHour = this.configService.getTechnician3TargetHourConfig();
         int maxRoute = Integer.MAX_VALUE;
+        float maxDistance = Float.MAX_VALUE;
 
         for (int i = 0; i < technician1Plan.size(); i++) {
             this.stgScheduleService.deleteSchedule();
@@ -1715,17 +1716,34 @@ public class ScheduleService {
             }
 
             int noOfRoute = this.scheduleRepository.findNumberOfRoute();
+            float totalDistance = findTotalDistance();
 
-            if (noOfRoute < maxRoute) {
+            if (noOfRoute < maxRoute || (noOfRoute == maxRoute && totalDistance < maxDistance)) {
                 this.stgScheduleService.truncateStgSchedule();
                 this.stgScheduleService.saveToTemp();
                 maxRoute = noOfRoute;
+                maxDistance = totalDistance;
             }
 
             this.stgScheduleService.deleteSchedule();
         }
 
         this.stgScheduleService.saveBestRequest();
+    }
+
+    private float findTotalDistance() {
+        Integer technicianId = this.scheduleRepository.findRouteTechnicianId();
+        List<Schedule> route = this.scheduleRepository.findSchedulesByTechnicianIdAndRequestIsNullOrderBySequenceAsc(technicianId);
+
+        int start = 0;
+        float totalDistance = 0;
+        for (Schedule schedule: route) {
+            ApartmentDistance apartmentDistance = this.apartmentDistanceService.getApartmentDistanceByStartAndDestination(start, schedule.getApartment().getId());
+            start = schedule.getApartment().getId();
+            totalDistance += apartmentDistance.getDistance();
+        }
+
+        return totalDistance;
     }
 
 //    public List<RequestListDto> getScheduleByUserId(Integer userId) {

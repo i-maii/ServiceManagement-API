@@ -182,4 +182,14 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Integer> {
     int closeTask(@Param("technician_id") Integer technicianId, @Param("sequence") Integer sequence);
 
     Schedule findScheduleById(Integer requestId);
+
+    @Query(nativeQuery = true, value = "SELECT technician_id " +
+            "FROM SCHEDULE s " +
+            "WHERE request_id IS NULL " +
+            "GROUP BY technician_id " +
+            "ORDER BY COUNT(*) DESC " +
+            "LIMIT 1")
+    Integer findRouteTechnicianId();
+
+    List<Schedule> findSchedulesByTechnicianIdAndRequestIsNullOrderBySequenceAsc(Integer technicianId);
 }

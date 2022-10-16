@@ -22,4 +22,6 @@ public interface ApartmentDistanceRepository extends JpaRepository<ApartmentDist
             "WHERE `start` = :start " +
             "AND destination = :destination")
     boolean checkCanWalk(@Param("start") Integer start, @Param("destination") Integer destination);
+
+    ApartmentDistance findApartmentDistanceByStartAndDestination(Integer start, Integer destination);
 }

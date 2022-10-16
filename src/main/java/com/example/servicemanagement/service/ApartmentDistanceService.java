@@ -1,5 +1,6 @@
 package com.example.servicemanagement.service;
 
+import com.example.servicemanagement.entity.ApartmentDistance;
 import com.example.servicemanagement.repository.ApartmentDistanceRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -18,5 +19,9 @@ public class ApartmentDistanceService {
 
     public boolean checkCanWalk(Integer start, Integer destination) {
         return this.apartmentDistanceRepository.checkCanWalk(start, destination);
+    }
+
+    public ApartmentDistance getApartmentDistanceByStartAndDestination(Integer start, Integer destination) {
+        return this.apartmentDistanceRepository.findApartmentDistanceByStartAndDestination(start, destination);
     }
 }
