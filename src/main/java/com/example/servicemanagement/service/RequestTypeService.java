@@ -1,6 +1,5 @@
 package com.example.servicemanagement.service;
 
-import com.example.servicemanagement.dto.RequestTypeDto;
 import com.example.servicemanagement.entity.RequestType;
 import com.example.servicemanagement.repository.RequestTypeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,5 +26,27 @@ public class RequestTypeService {
 
     public List<RequestType> getRequestTypeByRole(String role) {
         return this.requestTypeRepository.findRequestTypeByRoleName(role);
+    }
+
+    public List<Integer> getAllPriority() {
+        List<RequestType> requestTypes = this.getRequestTypeByRole("technician");
+        return requestTypes.stream().map(RequestType::getPriority).distinct().toList();
+    }
+
+    public void create(RequestType body) {
+        this.requestTypeRepository.saveAndFlush(body);
+    }
+
+    public void update(Integer id, RequestType body) {
+        RequestType requestType = this.requestTypeRepository.findRequestTypeById(id);
+        requestType.setName(body.getName());
+        requestType.setPriority(body.getPriority());
+        requestType.setRole(body.getRole());
+
+        this.requestTypeRepository.saveAndFlush(requestType);
+    }
+
+    public void delete(Integer id) {
+        this.requestTypeRepository.deleteById(id);
     }
 }

@@ -19,9 +19,36 @@ public class RequestTypeController {
         return this.requestTypeService.getAll();
     }
 
+    @GetMapping("/priority")
+    public List<Integer> getAllPriority() {
+        return this.requestTypeService.getAllPriority();
+    }
+
     @GetMapping("/{role}")
     public List<RequestType> getRequestTypeByRole(
             @PathVariable("role") String role) {
         return this.requestTypeService.getRequestTypeByRole(role);
+    }
+
+    @PostMapping("/")
+    public void create(
+            @RequestBody RequestType body
+    ) {
+        this.requestTypeService.create(body);
+    }
+
+    @PutMapping("/{id}")
+    public void create(
+            @PathVariable("id") Integer id,
+            @RequestBody RequestType body
+    ) {
+        this.requestTypeService.update(id, body);
+    }
+
+    @DeleteMapping("/{id}")
+    public void delete(
+            @PathVariable("id") Integer id
+    ) {
+        this.requestTypeService.delete(id);
     }
 }

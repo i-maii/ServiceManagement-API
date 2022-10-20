@@ -37,9 +37,6 @@ public class ScheduleService {
     ConfigService configService;
 
     @Autowired
-    RouteService routeService;
-
-    @Autowired
     ApartmentDistanceService apartmentDistanceService;
 
     @Autowired
