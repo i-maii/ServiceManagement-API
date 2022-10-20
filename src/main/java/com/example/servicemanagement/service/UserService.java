@@ -18,4 +18,21 @@ public class UserService {
     public User getById(Integer userId) {
         return this.userRepository.findUserById(userId);
     }
+
+    public User create(User user) {
+        return this.userRepository.saveAndFlush(user);
+    }
+
+    public void update(Integer id, User body) {
+        User user = this.userRepository.findUserById(id);
+        user.setName(body.getName());
+        user.setPhoneNo(body.getPhoneNo());
+        user.setPassword(body.getPassword());
+
+        this.userRepository.saveAndFlush(user);
+    }
+
+    public void delete(Integer id) {
+        this.userRepository.deleteById(id);
+    }
 }
