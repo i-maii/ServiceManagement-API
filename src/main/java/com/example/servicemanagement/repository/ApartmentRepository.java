@@ -5,6 +5,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
+
 public interface ApartmentRepository extends JpaRepository<Apartment, Integer> {
     Apartment findApartmentById(Integer id);
 
@@ -16,4 +18,6 @@ public interface ApartmentRepository extends JpaRepository<Apartment, Integer> {
             "ORDER BY s.`sequence`DESC \n" +
             "LIMIT 0, 1")
     Apartment findPreviousApartmentByTechnicianId(@Param("technician_id") Integer technicianId);
+
+    List<Apartment> findApartmentsByIdIsNot(Integer id);
 }

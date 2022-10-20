@@ -2,6 +2,7 @@ package com.example.servicemanagement.repository;
 
 import com.example.servicemanagement.entity.ApartmentDistance;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -24,4 +25,8 @@ public interface ApartmentDistanceRepository extends JpaRepository<ApartmentDist
     boolean checkCanWalk(@Param("start") Integer start, @Param("destination") Integer destination);
 
     ApartmentDistance findApartmentDistanceByStartAndDestination(Integer start, Integer destination);
+
+    @Modifying
+    @Query(nativeQuery = true, value = "DELETE FROM APARTMENT_DISTANCE WHERE start = :id OR destination = :id")
+    int deleteDistance(@Param("id") Integer id);
 }

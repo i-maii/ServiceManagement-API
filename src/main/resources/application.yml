@@ -4,3 +4,8 @@ spring:
      url: jdbc:mysql://localhost:3306/ServiceManagement
      username: root
      password: 1maiimaii
+googleapi:
+  key: ${GOOGLE_API_KEY}
+store:
+  latitude: ${STORE_LATITUDE}
+  longitude: ${STORE_LONGITUDE}
