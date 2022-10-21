@@ -5,11 +5,16 @@ import com.example.servicemanagement.entity.Apartment;
 import com.example.servicemanagement.repository.ApartmentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+
+import static com.example.servicemanagement.constant.Constant.ERR_INSERT_DUPLICATE_APARTMENT;
+import static com.example.servicemanagement.constant.Constant.ERR_UPDATE_INVALID_APARTMENT;
 
 @Service
 public class ApartmentService {
@@ -41,6 +46,12 @@ public class ApartmentService {
     }
 
     public void create(Apartment body) {
+        boolean isDup = this.apartmentRepository.checkCreateDuplicate(body.getName());
+
+        if (isDup) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ERR_INSERT_DUPLICATE_APARTMENT);
+        }
+
         List<Apartment> apartments = this.apartmentRepository.findAll();
         Apartment newApartment = this.apartmentRepository.saveAndFlush(body);
 
@@ -54,6 +65,12 @@ public class ApartmentService {
     }
 
     public void update(Integer id, Apartment body) {
+        boolean isDup = this.apartmentRepository.checkUpdateDuplicate(id, body.getName());
+
+        if (isDup) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ERR_UPDATE_INVALID_APARTMENT);
+        }
+
         Apartment apartment = this.apartmentRepository.findApartmentById(id);
         apartment.setName(body.getName());
         apartment.setAddress(body.getAddress());

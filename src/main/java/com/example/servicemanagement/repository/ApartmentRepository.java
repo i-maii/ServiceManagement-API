@@ -20,4 +20,14 @@ public interface ApartmentRepository extends JpaRepository<Apartment, Integer> {
     Apartment findPreviousApartmentByTechnicianId(@Param("technician_id") Integer technicianId);
 
     List<Apartment> findApartmentsByIdIsNot(Integer id);
+
+    @Query(nativeQuery = true, value = "SELECT CASE WHEN COUNT(*) > 0 THEN 'true' ELSE 'false' END " +
+            "FROM APARTMENT " +
+            "WHERE name = :name")
+    boolean checkCreateDuplicate(@Param("name") String name);
+
+    @Query(nativeQuery = true, value = "SELECT CASE WHEN COUNT(*) > 0 THEN 'true' ELSE 'false' END " +
+            "FROM APARTMENT " +
+            "WHERE id != :id AND name = :name")
+    boolean checkUpdateDuplicate(@Param("id") Integer id, @Param("name") String name);
 }
