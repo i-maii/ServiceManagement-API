@@ -4,7 +4,6 @@ import com.example.servicemanagement.entity.Role;
 import com.example.servicemanagement.entity.Tenant;
 import com.example.servicemanagement.entity.User;
 import com.example.servicemanagement.repository.TenantRepository;
-import com.sun.jdi.request.DuplicateRequestException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;

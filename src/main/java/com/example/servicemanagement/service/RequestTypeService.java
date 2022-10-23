@@ -25,6 +25,10 @@ public class RequestTypeService {
         return this.requestTypeRepository.findRequestTypeById(id);
     }
 
+    public List<RequestType> getRequestTypeByIds(List<Integer> id) {
+        return this.requestTypeRepository.findRequestTypesByIdIn(id);
+    }
+
     public List<RequestType> getRequestTypeForTechnician() {
         return this.requestTypeRepository.findRequestTypeByRoleName("technician");
     }

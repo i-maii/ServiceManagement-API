@@ -21,4 +21,6 @@ public interface RequestTypeRepository extends JpaRepository<RequestType, Intege
             "FROM REQUEST_TYPE " +
             "WHERE id != :id AND name = :name")
     boolean checkUpdateDuplicate(@Param("id") Integer id, @Param("name") String name);
+
+    List<RequestType> findRequestTypesByIdIn(List<Integer> id);
 }
