@@ -52,7 +52,7 @@ public class RequestTypeService {
     }
 
     public void update(Integer id, RequestType body) {
-        boolean isDup = this.requestTypeRepository.checkUpdateDuplicate(body.getId(), body.getName());
+        boolean isDup = this.requestTypeRepository.checkUpdateDuplicate(id, body.getName());
 
         if (isDup) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ERR_UPDATE_INVALID_REQUEST_TYPE);

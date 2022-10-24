@@ -37,7 +37,7 @@ public class TenantService {
     }
 
     public void update(Integer id, Tenant body) {
-        boolean isDup = this.tenantRepository.checkUpdateDuplicate(body.getId(), body.getRoomNo(), body.getApartment().getId(), body.getUser().getUsername());
+        boolean isDup = this.tenantRepository.checkUpdateDuplicate(id, body.getRoomNo(), body.getApartment().getId(), body.getUser().getUsername());
 
         if (isDup) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ERR_UPDATE_INVALID_TENANT);
@@ -45,10 +45,9 @@ public class TenantService {
 
         Tenant tenant = this.tenantRepository.findTenantById(id);
         tenant.setRoomNo(body.getRoomNo());
+        this.tenantRepository.saveAndFlush(tenant);
 
         this.userService.update(body.getUser().getId(), body.getUser());
-
-        this.tenantRepository.saveAndFlush(tenant);
     }
 
     public void create(Tenant body) {

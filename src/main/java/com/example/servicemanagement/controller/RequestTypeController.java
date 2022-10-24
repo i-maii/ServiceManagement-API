@@ -30,6 +30,11 @@ public class RequestTypeController {
         return this.requestTypeService.getRequestTypeByRole(role);
     }
 
+    @GetMapping("/public-area")
+    public List<RequestType> getRequestTypePublicArea() {
+        return this.requestTypeService.getRequestTypeByRole("owner");
+    }
+
     @PostMapping("/")
     public void create(
             @RequestBody RequestType body

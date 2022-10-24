@@ -12,6 +12,8 @@ public interface RequestTypeRepository extends JpaRepository<RequestType, Intege
 
     List<RequestType> findRequestTypeByRoleName(String roleName);
 
+    List<RequestType> findRequestTypeByRoleNameIsNot(String roleName);
+
     @Query(nativeQuery = true, value = "SELECT CASE WHEN COUNT(*) > 0 THEN 'true' ELSE 'false' END " +
             "FROM REQUEST_TYPE " +
             "WHERE name = :name")

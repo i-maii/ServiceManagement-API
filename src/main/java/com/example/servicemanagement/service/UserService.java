@@ -36,6 +36,7 @@ public class UserService {
     public void update(Integer id, User body) {
         User user = this.userRepository.findUserById(id);
         user.setName(body.getName());
+        user.setUsername(body.getUsername());
         user.setPhoneNo(body.getPhoneNo());
         user.setPassword(body.getPassword());
 
