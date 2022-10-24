@@ -23,4 +23,10 @@ public interface RequestTypeRepository extends JpaRepository<RequestType, Intege
     boolean checkUpdateDuplicate(@Param("id") Integer id, @Param("name") String name);
 
     List<RequestType> findRequestTypesByIdIn(List<Integer> id);
+
+    @Query(nativeQuery = true, value = "SELECT CASE WHEN COUNT(*) > 0 THEN 'false' ELSE 'true' END " +
+            "FROM REQUEST " +
+            "WHERE request_type_id = :request_type_id " +
+            "AND STATUS != 'DONE'")
+    boolean checkCanDelete(@Param("request_type_id") Integer requestTypeId);
 }

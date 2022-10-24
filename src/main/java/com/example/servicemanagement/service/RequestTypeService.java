@@ -9,8 +9,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
-import static com.example.servicemanagement.constant.Constant.ERR_INSERT_DUPLICATE_REQUEST_TYPE;
-import static com.example.servicemanagement.constant.Constant.ERR_UPDATE_INVALID_REQUEST_TYPE;
+import static com.example.servicemanagement.constant.Constant.*;
 
 @Service
 public class RequestTypeService {
@@ -68,6 +67,12 @@ public class RequestTypeService {
     }
 
     public void delete(Integer id) {
+        boolean canDelete = this.requestTypeRepository.checkCanDelete(id);
+
+        if (!canDelete) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ERR_DELETE_INVALID_REQUEST_TYPE);
+        }
+
         this.requestTypeRepository.deleteById(id);
     }
 }

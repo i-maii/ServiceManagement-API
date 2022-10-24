@@ -14,8 +14,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import static com.example.servicemanagement.constant.Constant.ERR_INSERT_DUPLICATE_TECHNICIAN;
-import static com.example.servicemanagement.constant.Constant.ERR_UPDATE_INVALID_TECHNICIAN;
+import static com.example.servicemanagement.constant.Constant.*;
 
 @Service
 public class TechnicianService {
@@ -113,10 +112,18 @@ public class TechnicianService {
         technician.setRequestTypes(requestTypes);
         technician.setUser(body.getUser());
 
+        this.userService.update(body.getUser().getId(), body.getUser());
+
         this.technicianRepository.saveAndFlush(technician);
     }
 
     public void delete(Integer id) {
+        boolean canDelete = this.technicianRepository.checkCanDelete(id);
+
+        if (!canDelete) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ERR_DELETE_INVALID_TECHNICIAN);
+        }
+
         Technician technician = this.technicianRepository.findTechnicianById(id);
         this.technicianRepository.deleteById(id);
         this.userService.delete(technician.getUser().getId());

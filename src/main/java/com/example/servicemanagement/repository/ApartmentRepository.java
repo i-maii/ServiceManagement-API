@@ -30,4 +30,9 @@ public interface ApartmentRepository extends JpaRepository<Apartment, Integer> {
             "FROM APARTMENT " +
             "WHERE id != :id AND name = :name")
     boolean checkUpdateDuplicate(@Param("id") Integer id, @Param("name") String name);
+
+    @Query(nativeQuery = true, value = "SELECT CASE WHEN COUNT(*) > 0 THEN 'false' ELSE 'true' END " +
+            "FROM TENANT " +
+            "WHERE apartment_id = :apartment_id")
+    boolean checkCanDelete(@Param("apartment_id") Integer apartmentId);
 }

@@ -13,8 +13,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
-import static com.example.servicemanagement.constant.Constant.ERR_INSERT_DUPLICATE_APARTMENT;
-import static com.example.servicemanagement.constant.Constant.ERR_UPDATE_INVALID_APARTMENT;
+import static com.example.servicemanagement.constant.Constant.*;
 
 @Service
 public class ApartmentService {
@@ -90,6 +89,12 @@ public class ApartmentService {
     }
 
     public void delete(Integer id) {
+        boolean canDelete = this.apartmentRepository.checkCanDelete(id);
+
+        if (!canDelete) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ERR_DELETE_INVALID_APARTMENT);
+        }
+
         this.apartmentRepository.deleteById(id);
         this.apartmentDistanceService.deleteDistance(id);
     }

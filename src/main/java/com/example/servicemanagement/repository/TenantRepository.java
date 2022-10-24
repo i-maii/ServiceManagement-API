@@ -12,7 +12,7 @@ public interface TenantRepository extends JpaRepository<Tenant, Integer> {
 
     Tenant findTenantByUserId(Integer userId);
 
-    List<Tenant> findTenantsByApartmentId(Integer apartmentId);
+    List<Tenant> findTenantsByApartmentIdOrderByRoomNoAsc(Integer apartmentId);
 
     @Query(nativeQuery = true, value = "SELECT CASE WHEN COUNT(*) > 0 THEN 'true' ELSE 'false' END " +
             "FROM TENANT t " +
@@ -28,4 +28,10 @@ public interface TenantRepository extends JpaRepository<Tenant, Integer> {
             "WHERE (room_no = :room_no AND apartment_id = :apartment_id) " +
             "OR username = :username")
     boolean checkCreateDuplicate(@Param("room_no") String roomNo, @Param("apartment_id") Integer apartmentId, @Param("username") String username);
+
+    @Query(nativeQuery = true, value = "SELECT CASE WHEN COUNT(*) > 0 THEN 'false' ELSE 'true' END " +
+            "FROM REQUEST " +
+            "WHERE user_id = :user_id " +
+            "AND STATUS != 'DONE'")
+    boolean checkCanDelete(@Param("user_id") Integer userId);
 }

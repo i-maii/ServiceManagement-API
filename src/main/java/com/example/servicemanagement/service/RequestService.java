@@ -295,8 +295,8 @@ public class RequestService {
         this.requestRepository.saveAndFlush(request);
     }
 
-    public List<RequestListDto> getAdminRequestList() {
-        List<RequestType> requestTypes = this.requestTypeService.getRequestTypeByRole("admin");
+    public List<RequestListDto> getRequestList(String role) {
+        List<RequestType> requestTypes = this.requestTypeService.getRequestTypeByRole(role);
         List<Request> requestList = this.requestRepository.findRequestsByStatusAndRequestTypeIn(STATUS_READY_TO_SERVICE, requestTypes);
         Map<Apartment, List<Request>> r = requestList.stream().collect(Collectors.groupingBy(Request::getApartment));
 
