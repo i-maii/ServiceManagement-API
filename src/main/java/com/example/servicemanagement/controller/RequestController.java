@@ -9,8 +9,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-import static com.example.servicemanagement.constant.Constant.STATUS_READY_FOR_PLAN;
-
 @RestController
 @RequestMapping(value="/request")
 public class RequestController {
@@ -63,10 +61,11 @@ public class RequestController {
         this.requestService.updateEstimate(requestId, body);
     }
 
-    @GetMapping("/admin")
-    public List<RequestListDto> getAdminRequestList(
+    @GetMapping("/role/{role}")
+    public List<RequestListDto> getRequestList(
+            @PathVariable("role") String role
     ) {
-        return this.requestService.getAdminRequestList();
+        return this.requestService.getRequestList(role);
     }
 
     @PostMapping("/{id}/close")

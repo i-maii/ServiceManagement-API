@@ -58,9 +58,13 @@ public class RequestService {
             List<EstimateRequestDto> estimateRequestList = new ArrayList<>();
             for (Request request: r.get(apartment)) {
                 EstimateRequestDto estimateRequest = new EstimateRequestDto();
-                Tenant tenant = this.tenantService.getTenantByUserId(request.getUser().getId());
                 estimateRequest.setRequestId(request.getId());
-                estimateRequest.setRoomNo(tenant.getRoomNo());
+
+                Tenant tenant = this.tenantService.getTenantByUserId(request.getUser().getId());
+                if (tenant != null) {
+                    estimateRequest.setRoomNo(tenant.getRoomNo());
+                }
+
                 estimateRequest.setRequestType(request.getRequestType().getName());
                 estimateRequest.setPriority(request.getPriority());
                 estimateRequest.setEstimateTechnician(request.getEstimateTechnician());
@@ -295,8 +299,8 @@ public class RequestService {
         this.requestRepository.saveAndFlush(request);
     }
 
-    public List<RequestListDto> getAdminRequestList() {
-        List<RequestType> requestTypes = this.requestTypeService.getRequestTypeByRole("admin");
+    public List<RequestListDto> getRequestList(String role) {
+        List<RequestType> requestTypes = this.requestTypeService.getRequestTypeByRole(role);
         List<Request> requestList = this.requestRepository.findRequestsByStatusAndRequestTypeIn(STATUS_READY_TO_SERVICE, requestTypes);
         Map<Apartment, List<Request>> r = requestList.stream().collect(Collectors.groupingBy(Request::getApartment));
 
@@ -308,9 +312,11 @@ public class RequestService {
             List<RequestItemDto> requestItemDtos = new ArrayList<>();
             for (Request request: r.get(apartment)) {
                 RequestItemDto requestItemDto = new RequestItemDto();
-                Tenant tenant = this.tenantService.getTenantByUserId(request.getUser().getId());
                 requestItemDto.setRequestId(request.getId());
-                requestItemDto.setRoomNo(tenant.getRoomNo());
+                Tenant tenant = this.tenantService.getTenantByUserId(request.getUser().getId());
+                if (tenant != null) {
+                    requestItemDto.setRoomNo(tenant.getRoomNo());
+                }
                 requestItemDto.setRequestType(request.getRequestType().getName());
                 requestItemDtos.add(requestItemDto);
             }

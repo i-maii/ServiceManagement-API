@@ -11,8 +11,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
-import static com.example.servicemanagement.constant.Constant.ERR_INSERT_DUPLICATE_TENANT;
-import static com.example.servicemanagement.constant.Constant.ERR_UPDATE_INVALID_TENANT;
+import static com.example.servicemanagement.constant.Constant.*;
 
 @Service
 public class TenantService {
@@ -34,11 +33,11 @@ public class TenantService {
     }
 
     public List<Tenant> getAllByApartmentId(Integer apartmentId) {
-        return this.tenantRepository.findTenantsByApartmentId(apartmentId);
+        return this.tenantRepository.findTenantsByApartmentIdOrderByRoomNoAsc(apartmentId);
     }
 
     public void update(Integer id, Tenant body) {
-        boolean isDup = this.tenantRepository.checkUpdateDuplicate(body.getId(), body.getRoomNo(), body.getApartment().getId(), body.getUser().getUsername());
+        boolean isDup = this.tenantRepository.checkUpdateDuplicate(id, body.getRoomNo(), body.getApartment().getId(), body.getUser().getUsername());
 
         if (isDup) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ERR_UPDATE_INVALID_TENANT);
@@ -46,12 +45,9 @@ public class TenantService {
 
         Tenant tenant = this.tenantRepository.findTenantById(id);
         tenant.setRoomNo(body.getRoomNo());
-        User user = tenant.getUser();
-        user.setName(body.getUser().getName());
-        user.setPhoneNo(body.getUser().getPhoneNo());
-        user.setPassword(body.getUser().getPassword());
-
         this.tenantRepository.saveAndFlush(tenant);
+
+        this.userService.update(body.getUser().getId(), body.getUser());
     }
 
     public void create(Tenant body) {
@@ -70,6 +66,13 @@ public class TenantService {
 
     public void delete(Integer id) {
         Tenant tenant = this.tenantRepository.findTenantById(id);
+
+        boolean canDelete = this.tenantRepository.checkCanDelete(tenant.getUser().getId());
+
+        if (!canDelete) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ERR_DELETE_INVALID_TENANT);
+        }
+
         this.tenantRepository.deleteById(id);
         this.userService.delete(tenant.getUser().getId());
     }

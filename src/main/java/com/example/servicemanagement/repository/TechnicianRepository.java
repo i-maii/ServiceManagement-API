@@ -50,4 +50,9 @@ public interface TechnicianRepository extends JpaRepository<Technician, Integer>
             "INNER JOIN `USER` u ON t.user_id = u.id " +
             "WHERE username = :username")
     boolean checkCreateDuplicate(@Param("username") String username);
+
+    @Query(nativeQuery = true, value = "SELECT CASE WHEN COUNT(*) > 0 THEN 'false' ELSE 'true' END " +
+            "FROM SCHEDULE " +
+            "WHERE technician_id = :technician_id")
+    boolean checkCanDelete(@Param("technician_id") Integer technicianId);
 }
