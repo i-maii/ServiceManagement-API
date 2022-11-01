@@ -25,6 +25,6 @@ public class FCMService {
     }
 
     private Message.Builder getPreconfiguredMessageBuilder(PushNotificationDto request) {
-        return Message.builder().setNotification(Notification.builder().setTitle(request.getTitle()).setBody(request.getMessage()).build());
+        return Message.builder().putData("title", request.getTitle()).putData("body", request.getMessage()).putData("click_action", request.getAction());
     }
 }

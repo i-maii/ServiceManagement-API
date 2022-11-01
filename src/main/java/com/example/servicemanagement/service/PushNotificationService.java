@@ -45,6 +45,7 @@ public class PushNotificationService {
         request.setMessage("วันที่ " + dateFormat.format(Calendar.getInstance().getTime()) + " เวลา " + timeFormat.format(new Date(startTime.getTime())) + "-" + timeFormat.format(new Date(endTime.getTime())) + "น. เข้าซ่อม" + requestType);
         request.setTitle("แจ้งเตือนเข้าซ่อม");
         request.setToken(notificationToken);
+        request.setAction("tracking");
         try {
             fcmService.sendMessageToToken(request);
         } catch (Exception e) {
@@ -57,6 +58,7 @@ public class PushNotificationService {
         request.setMessage("จัดแผนงานซ่อม วันที่ " + dateFormat.format(Calendar.getInstance().getTime()) + " เรียบร้อยแล้ว");
         request.setTitle("แจ้งเตือนแผนงานซ่อม");
         request.setToken(notificationToken);
+        request.setAction("schedule");
         try {
             fcmService.sendMessageToToken(request);
         } catch (Exception e) {
@@ -69,6 +71,7 @@ public class PushNotificationService {
         request.setMessage("ประเมินงานซ่อม " + requestType + " หอ" + apartmentName + " ห้อง" + roomNo);
         request.setTitle("แจ้งเตือนประเมินรายการซ่อม");
         request.setToken(notificationToken);
+        request.setAction("estimation");
         try {
             fcmService.sendMessageToToken(request);
         } catch (Exception e) {
@@ -81,6 +84,7 @@ public class PushNotificationService {
         request.setMessage("หอ" + apartmentName + " ห้อง" + roomNo + " " + requestType);
         request.setTitle("แจ้งรายการซ่อม");
         request.setToken(notificationToken);
+        request.setAction("service_other");
         try {
             fcmService.sendMessageToToken(request);
         } catch (Exception e) {
