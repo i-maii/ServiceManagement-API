@@ -20,6 +20,10 @@ public class RequestTypeService {
         return this.requestTypeRepository.findAll();
     }
 
+    public List<RequestType> getAllOrderByCommonArea() {
+        return this.requestTypeRepository.findRequestTypesByOrderByCommonAreaAscNameAsc();
+    }
+
     public RequestType getRequestTypeById(Integer id) {
         return this.requestTypeRepository.findRequestTypeById(id);
     }
@@ -34,6 +38,10 @@ public class RequestTypeService {
 
     public List<RequestType> getRequestTypeByRole(String role) {
         return this.requestTypeRepository.findRequestTypeByRoleName(role);
+    }
+
+    public List<RequestType> getRequestTypeCommonArea() {
+        return this.requestTypeRepository.findRequestTypesByCommonArea(true);
     }
 
     public List<Integer> getAllPriority() {

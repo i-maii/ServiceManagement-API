@@ -3,6 +3,8 @@ package com.example.servicemanagement.service;
 import com.example.servicemanagement.entity.Config;
 import com.example.servicemanagement.entity.Request;
 import com.example.servicemanagement.repository.ConfigRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -13,6 +15,8 @@ import static com.example.servicemanagement.constant.Constant.*;
 @Service
 public class ConfigService {
 
+    private static Logger logger = LoggerFactory.getLogger(ConfigService.class);
+
     @Autowired
     ConfigRepository configRepository;
 
@@ -20,6 +24,7 @@ public class ConfigService {
     RequestService requestService;
 
     public void findConfiguration() {
+        logger.info("---- start finding config ----");
         List<Request> allRequest = this.requestService.getRequestByStatus(STATUS_READY_FOR_PLAN);
         boolean require2Technician = this.requestService.checkRequire2Technician(allRequest);
 
@@ -34,8 +39,8 @@ public class ConfigService {
 
         updateConfigByKey(KEY_TOTAL_REQUEST_HOUR, String.valueOf(totalRequestHour));
         updateConfigByKey(KEY_TOTAL_PRIORITY_HOUR, String.valueOf(totalPriorityRequestHour));
-        updateConfigByKey(KEY_LOWEST_TOTAL_PRIORITY_HOUR, String.valueOf(lowestTotalPriorityHour));
-        updateConfigByKey(KEY_LOWEST_TOTAL_REQUEST_HOUR, String.valueOf(lowestTotalRequestHour));
+        logger.info("totalRequestHour: {} hr", totalRequestHour);
+        logger.info("totalPriorityRequestHour: {} hr", totalPriorityRequestHour);
 
         if (totalRequestHour > 16 && totalRequestHour <= 20) {
             if (totalPriorityRequestHour > 16) {
@@ -54,6 +59,7 @@ public class ConfigService {
         }
 
         updateConfigByKey(KEY_USAGE_TECHNICIAN, String.valueOf(usageTechnician));
+        logger.info("usageTechnician: {} hr", usageTechnician);
 
         int priorityHourMin = 0;
         int priorityHourMax = 0;
@@ -127,30 +133,46 @@ public class ConfigService {
         }
 
         updateConfigByKey(KEY_TOTAL_TARGET_HOUR, String.valueOf(totalTargetHour));
+        logger.info("totalTargetHour: {} hr", totalTargetHour);
 
-        if (targetHour.length == 1) {
-            updateConfigByKey(KEY_TECHNICIAN_TARGET_HOUR_1, String.valueOf(targetHour[0]));
-            updateConfigByKey(KEY_TECHNICIAN_TARGET_HOUR_2, "0");
-            updateConfigByKey(KEY_TECHNICIAN_TARGET_HOUR_3, "0");
-            updateConfigByKey(KEY_LOWEST_TOTAL_PRIORITY_HOUR, "0");
-            updateConfigByKey(KEY_LOWEST_TOTAL_REQUEST_HOUR, "0");
-        } else if (targetHour.length == 2) {
-            updateConfigByKey(KEY_TECHNICIAN_TARGET_HOUR_1, String.valueOf(targetHour[0]));
-            updateConfigByKey(KEY_TECHNICIAN_TARGET_HOUR_2, String.valueOf(targetHour[1]));
-            updateConfigByKey(KEY_TECHNICIAN_TARGET_HOUR_3, "0");
-            updateConfigByKey(KEY_LOWEST_TOTAL_PRIORITY_HOUR, "0");
-            updateConfigByKey(KEY_LOWEST_TOTAL_REQUEST_HOUR, "0");
-        } else {
-            updateConfigByKey(KEY_TECHNICIAN_TARGET_HOUR_1, String.valueOf(targetHour[0]));
-            updateConfigByKey(KEY_TECHNICIAN_TARGET_HOUR_2, String.valueOf(targetHour[1]));
-            updateConfigByKey(KEY_TECHNICIAN_TARGET_HOUR_3, String.valueOf(targetHour[2]));
+        String targetHour1 = String.valueOf(targetHour[0]);
+        String targetHour2 = "0";
+        String targetHour3 = "0";
+        String technician3TotalRequestHour = "0";
+        String technician3TotalPriorityHour = "0";
+        if (targetHour.length == 2) {
+            targetHour2 = String.valueOf(targetHour[1]);
+        } else if (targetHour.length == 3) {
+            targetHour2 = String.valueOf(targetHour[1]);
+            targetHour3 = String.valueOf(targetHour[2]);
         }
+
+        updateConfigByKey(KEY_TECHNICIAN_TARGET_HOUR_1, targetHour1);
+        updateConfigByKey(KEY_TECHNICIAN_TARGET_HOUR_2, targetHour2);
+        updateConfigByKey(KEY_TECHNICIAN_TARGET_HOUR_3, targetHour3);
+        logger.info("technician1 targetHour: {} hr", targetHour1);
+        logger.info("technician2 targetHour: {} hr", targetHour2);
+        logger.info("technician3 targetHour: {} hr", targetHour3);
+
+        updateConfigByKey(KEY_LOWEST_TOTAL_PRIORITY_HOUR, technician3TotalPriorityHour);
+        updateConfigByKey(KEY_LOWEST_TOTAL_REQUEST_HOUR, technician3TotalRequestHour);
+        logger.info("technician3 totalPriorityHour: {} hr", technician3TotalPriorityHour);
+        logger.info("technician3 totalRequestHour: {} hr", technician3TotalRequestHour);
 
         updateConfigByKey(KEY_PRIORITY_HOUR_MIN, String.valueOf(priorityHourMin));
         updateConfigByKey(KEY_PRIORITY_HOUR_MAX, String.valueOf(priorityHourMax));
         updateConfigByKey(KEY_LOWEST_PRIORITY_HOUR_MIN, String.valueOf(lowestPriorityHourMin));
         updateConfigByKey(KEY_LOWEST_PRIORITY_HOUR_MAX, String.valueOf(lowestPriorityHourMax));
+        logger.info("technician1, technician2 priorityHourMin: {} hr", priorityHourMin);
+        logger.info("technician1, technician2 priorityHourMax: {} hr", priorityHourMax);
+        logger.info("technician3 priorityHourMin: {} hr", lowestPriorityHourMin);
+        logger.info("technician3 priorityHourMax: {} hr", lowestPriorityHourMax);
 
+        logger.info("---- finish finding config ----");
+    }
+
+    public void updateDrive(int technicianId) {
+        updateConfigByKey(KEY_DRIVER, String.valueOf(technicianId));
     }
 
     private void updateConfigByKey(String key, String value) {

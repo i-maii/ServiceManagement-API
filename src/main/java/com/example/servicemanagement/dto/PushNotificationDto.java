@@ -9,9 +9,10 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
-public class RequestDto {
-    private Integer requestTypeId;
-    private Integer userId;
-    private String detail;
-    private Integer apartmentId;
+public class PushNotificationDto {
+    private String title;
+    private String message;
+    private String topic;
+    private String token;
+    private String action;
 }

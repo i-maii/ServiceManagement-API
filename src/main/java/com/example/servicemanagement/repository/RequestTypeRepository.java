@@ -31,4 +31,8 @@ public interface RequestTypeRepository extends JpaRepository<RequestType, Intege
             "WHERE request_type_id = :request_type_id " +
             "AND STATUS != 'DONE'")
     boolean checkCanDelete(@Param("request_type_id") Integer requestTypeId);
+
+    List<RequestType> findRequestTypesByCommonArea(boolean isCommonArea);
+
+    List<RequestType> findRequestTypesByOrderByCommonAreaAscNameAsc();
 }

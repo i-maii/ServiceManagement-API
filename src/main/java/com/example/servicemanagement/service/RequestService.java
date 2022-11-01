@@ -34,6 +34,9 @@ public class RequestService {
     @Autowired
     ApartmentService apartmentService;
 
+    @Autowired
+    PushNotificationService pushNotificationService;
+
     public Request getRequestById(Integer id) {
         return this.requestRepository.findRequestById(id);
     }
@@ -43,7 +46,7 @@ public class RequestService {
     }
 
     public List<Request> getRequestByStatusList(List<String> statusList) {
-        return this.requestRepository.findRequestsByStatusIn(statusList);
+        return this.requestRepository.findRequestsByStatusInOrderByEstimateTimeAscEstimateTechnicianAsc(statusList);
     }
 
     public List<EstimateDto> getAllEstimateRequest() {
@@ -57,6 +60,39 @@ public class RequestService {
 
             List<EstimateRequestDto> estimateRequestList = new ArrayList<>();
             for (Request request: r.get(apartment)) {
+                EstimateRequestDto estimateRequest = new EstimateRequestDto();
+                estimateRequest.setRequestId(request.getId());
+
+                Tenant tenant = this.tenantService.getTenantByUserId(request.getUser().getId());
+                if (tenant != null) {
+                    estimateRequest.setRoomNo(tenant.getRoomNo());
+                }
+
+                estimateRequest.setRequestType(request.getRequestType().getName());
+                estimateRequest.setPriority(request.getPriority());
+                estimateRequest.setEstimateTechnician(request.getEstimateTechnician());
+                estimateRequest.setEstimateTime(request.getEstimateTime());
+                estimateRequestList.add(estimateRequest);
+            }
+
+            estimate.setRequestList(estimateRequestList);
+            estimateList.add(estimate);
+        }
+
+        return estimateList;
+    }
+
+    public List<EstimateDto> getAllEstimateRequestV2() {
+        List<Request> requestList = getRequestByStatusList(Arrays.asList(STATUS_READY_FOR_ESTIMATION, STATUS_READY_FOR_PLAN));
+        List<Apartment> apartments = requestList.stream().map(Request::getApartment).distinct().toList();
+
+        List<EstimateDto> estimateList = new ArrayList<>();
+        for (Apartment apartment: apartments) {
+            EstimateDto estimate = new EstimateDto();
+            estimate.setApartmentName(apartment.getName());
+
+            List<EstimateRequestDto> estimateRequestList = new ArrayList<>();
+            for (Request request: requestList.stream().filter(request -> request.getApartment().equals(apartment)).toList()) {
                 EstimateRequestDto estimateRequest = new EstimateRequestDto();
                 estimateRequest.setRequestId(request.getId());
 
@@ -239,15 +275,16 @@ public class RequestService {
         request.setRequestType(this.requestTypeService.getRequestTypeById(dto.getRequestTypeId()));
         request.setUser(this.userService.getById(dto.getUserId()));
         Integer apartmentId = dto.getApartmentId();
+        String roomNo = "";
         Apartment apartment;
         if (apartmentId == null) {
-            apartment = this.tenantService.getTenantByUserId(dto.getUserId()).getApartment();
+            Tenant tenant = this.tenantService.getTenantByUserId(dto.getUserId());
+            apartment = tenant.getApartment();
+            roomNo = tenant.getRoomNo();
         } else {
             apartment = this.apartmentService.getApartmentById(apartmentId);
         }
         request.setApartment(apartment);
-        request.setName(dto.getName());
-        request.setPhoneNo(dto.getPhoneNo());
         request.setDetail(dto.getDetail());
         request.setPriority(request.getRequestType().getPriority());
         request.setRequestDate(new Date());
@@ -256,11 +293,29 @@ public class RequestService {
 
         if (request.getRequestType().getRole().getName().equals("technician")) {
             request.setStatus(STATUS_READY_FOR_ESTIMATION);
+//            sendEstimationNotification(apartment.getName(), roomNo, request.getRequestType().getName());
         } else {
             request.setStatus(STATUS_READY_TO_SERVICE);
+//            sendServiceOtherNotification(apartment.getName(), roomNo, request.getRequestType());
         }
 
         this.requestRepository.saveAndFlush(request);
+    }
+
+    private void sendEstimationNotification(String apartmentName, String roomNo, String requestType) {
+        List<User> users = this.userService.getUserByRoleNames(Arrays.asList("admin", "owner"));
+
+        for (User user: users) {
+            this.pushNotificationService.sendEstimationPushNotification(user.getNotificationToken(), apartmentName, roomNo, requestType);
+        }
+    }
+
+    private void sendServiceOtherNotification(String apartmentName, String roomNo, RequestType requestType) {
+        List<User> users = this.userService.getUserByRoleId(requestType.getRole().getId());
+
+        for (User user: users) {
+            this.pushNotificationService.sendServiceOtherPushNotification(user.getNotificationToken(), apartmentName, roomNo, requestType.getName());
+        }
     }
 
     public List<Request> getRequestListByUserId(Integer userId) {
@@ -333,5 +388,19 @@ public class RequestService {
         request.setStatus(STATUS_DONE);
 
         this.requestRepository.saveAndFlush(request);
+    }
+
+    public void updateServiceDate() {
+        List<Request> requests = this.requestRepository.findRequestsByStatus(STATUS_READY_TO_SERVICE);
+        Calendar calendar = Calendar.getInstance();
+        calendar.set(Calendar.HOUR_OF_DAY, 0);
+        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
+
+        for (Request request: requests) {
+            request.setServiceDate(calendar.getTime());
+            this.requestRepository.saveAndFlush(request);
+        }
     }
 }

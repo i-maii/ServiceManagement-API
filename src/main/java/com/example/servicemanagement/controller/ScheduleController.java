@@ -16,8 +16,8 @@ public class ScheduleController {
     ScheduleService scheduleService;
 
     @GetMapping("/")
-    public void getPossibleServiceRequest() throws ParseException {
-        this.scheduleService.findRequestWithSpecificHour();
+    public void getRequestPlan() throws ParseException {
+        this.scheduleService.findRequestPlan();
     }
 
 //    @GetMapping("/technician/{userId}")
@@ -34,11 +34,19 @@ public class ScheduleController {
         return this.scheduleService.getScheduleByUserId(userId);
     }
 
-    @PostMapping("/{id}/request/{requestId}")
+    @PostMapping("/{id}/{action}/request/{requestId}")
     public void closeTaskSchedule(
             @PathVariable("id") Integer scheduleId,
+            @PathVariable("action") String action,
             @PathVariable("requestId") Integer requestId
     ) {
-        this.scheduleService.closeTask(scheduleId, requestId);
+        this.scheduleService.closeTask(scheduleId, requestId, action);
+    }
+
+    @GetMapping("/driver/{userId}")
+    public boolean checkDriver(
+            @PathVariable("userId") Integer userId
+    ) {
+        return this.scheduleService.checkDriver(userId);
     }
 }

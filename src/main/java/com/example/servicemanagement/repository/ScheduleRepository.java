@@ -181,7 +181,7 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Integer> {
     @Query(nativeQuery = true, value = "DELETE FROM SCHEDULE WHERE technician_id = :technician_id AND `sequence` <= :sequence")
     int closeTask(@Param("technician_id") Integer technicianId, @Param("sequence") Integer sequence);
 
-    Schedule findScheduleById(Integer requestId);
+    Schedule findScheduleById(Integer id);
 
     @Query(nativeQuery = true, value = "SELECT technician_id " +
             "FROM SCHEDULE s " +
@@ -192,4 +192,12 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Integer> {
     Integer findRouteTechnicianId();
 
     List<Schedule> findSchedulesByTechnicianIdAndRequestIsNullOrderBySequenceAsc(Integer technicianId);
+
+    List<Schedule> findSchedulesByRequestIsNotNull();
+
+    List<Schedule> findSchedulesByRequestIsNotNullOrderByTechnicianIdAscSequenceAsc();
+
+    @Query(nativeQuery = true, value = "SELECT DISTINCT technician_id " +
+            "FROM SCHEDULE s")
+    List<Integer> findTechnicianId();
 }

@@ -22,9 +22,6 @@ public class Technician {
     @JoinColumn(name = "user_id")
     private User user;
 
-    @Column(name = "is_available")
-    private boolean available;
-
     @ManyToMany
     @JoinTable(
             name = "TECHNICIAN_ABILITIES",

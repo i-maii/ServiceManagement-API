@@ -4,7 +4,7 @@ import lombok.*;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import javax.persistence.*;
-import java.util.Date;
+import java.sql.Time;
 
 @Entity
 @EntityListeners(AuditingEntityListener.class)
@@ -18,21 +18,22 @@ public class Schedule {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @OneToOne(cascade = CascadeType.MERGE)
+    @OneToOne
     @JoinColumn(name = "technician_id")
     private Technician technician;
 
-    @OneToOne(cascade = CascadeType.MERGE)
+    @OneToOne
     @JoinColumn(name = "request_id")
     private Request request;
 
-    private Date serviceDateTime;
-
-    @OneToOne(cascade = CascadeType.MERGE)
+    @OneToOne
     @JoinColumn(name = "apartment_id")
     private Apartment apartment;
 
     private Integer sequence;
 
     private Integer requestHour;
+
+    private Time serviceStartTime;
+    private Time serviceEndTime;
 }

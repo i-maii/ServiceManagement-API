@@ -16,7 +16,7 @@ public class RequestTypeController {
 
     @GetMapping("/")
     public List<RequestType> getAll() {
-        return this.requestTypeService.getAll();
+        return this.requestTypeService.getAllOrderByCommonArea();
     }
 
     @GetMapping("/priority")
@@ -30,9 +30,9 @@ public class RequestTypeController {
         return this.requestTypeService.getRequestTypeByRole(role);
     }
 
-    @GetMapping("/public-area")
-    public List<RequestType> getRequestTypePublicArea() {
-        return this.requestTypeService.getRequestTypeByRole("owner");
+    @GetMapping("/common-area")
+    public List<RequestType> getRequestTypeCommonArea() {
+        return this.requestTypeService.getRequestTypeCommonArea();
     }
 
     @PostMapping("/")

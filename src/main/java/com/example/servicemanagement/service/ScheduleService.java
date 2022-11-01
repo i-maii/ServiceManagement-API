@@ -4,11 +4,15 @@ import com.example.servicemanagement.dto.ScheduleDto;
 import com.example.servicemanagement.dto.TechnicianPlanDto;
 import com.example.servicemanagement.entity.*;
 import com.example.servicemanagement.repository.ScheduleRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.sql.Time;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.function.Predicate;
 
@@ -17,6 +21,8 @@ import static com.example.servicemanagement.constant.Constant.*;
 @Service
 @Transactional
 public class ScheduleService {
+
+    private static Logger logger = LoggerFactory.getLogger(ScheduleService.class);
 
     private int totalApartment = 6;
     private long totalDate = Long.MAX_VALUE;
@@ -48,7 +54,11 @@ public class ScheduleService {
     @Autowired
     TenantService tenantService;
 
-    public void findRequestWithSpecificHour() throws ParseException {
+    @Autowired
+    PushNotificationService pushNotificationService;
+
+    public void findRequestPlan() throws ParseException {
+        logger.info("---- start finding request plan ----");
         this.configService.findConfiguration();
 
         Integer[] rangePriorityHour = this.configService.getRangePriorityHour();
@@ -99,7 +109,26 @@ public class ScheduleService {
             boolean isAlreadyFindRoute = this.scheduleRepository.checkAlreadyFindRoute();
             if (!isAlreadyFindRoute) {
                 findRoute();
+//                sendNotificationToTenant();
+//                sendNotificationToTechnician();
             }
+        }
+    }
+
+    private void sendNotificationToTenant() {
+        List<Schedule> schedules = this.scheduleRepository.findSchedulesByRequestIsNotNull();
+
+        for (Schedule schedule: schedules) {
+            this.pushNotificationService.sendServicePushNotification(schedule.getRequest().getUser().getNotificationToken(), schedule.getServiceStartTime(), schedule.getServiceEndTime(), schedule.getRequest().getRequestType().getName());
+        }
+    }
+
+    private void sendNotificationToTechnician() {
+        List<Integer> technicianIds = this.scheduleRepository.findTechnicianId();
+        List<Technician> technicians = this.technicianService.getTechnicianByIds(technicianIds);
+
+        for (Technician technician: technicians) {
+            this.pushNotificationService.sendSchedulePushNotification(technician.getUser().getNotificationToken());
         }
     }
 
@@ -665,7 +694,6 @@ public class ScheduleService {
 
             apartmentIds = findApartmentId(possibleLowestPlan, returnList);
 
-            // TODO: เช็คตรงนี้ดีๆ ต้อง filter แต่ที่เวลาน้อยกว่า remaining
             List<TechnicianPlanDto> priorityRequest = remainingRequire1Request.stream().filter(req -> MOST_PRIORITY.contains(req.getPriority()) && req.getEstimateTime() <= remainingHourForTechnician1).toList();
             List<TechnicianPlanDto> normalRequest = remainingRequire1Request.stream().filter(Predicate.not(priorityRequest::contains)).sorted(Comparator.comparing(TechnicianPlanDto::getEstimateTime)).toList();
             int priorityHour = priorityRequest.stream().map(TechnicianPlanDto::getEstimateTime).mapToInt(Integer::intValue).sum();
@@ -756,17 +784,78 @@ public class ScheduleService {
         return cnt;
     }
 
-    public void findRoute() throws NoSuchElementException {
+    public void findRoute() throws NoSuchElementException, ParseException {
         int technician1TargetHour = this.configService.getTechnician1TargetHourConfig();
         int technician2TargetHour = this.configService.getTechnician2TargetHourConfig();
         int technician3TargetHour = this.configService.getTechnician3TargetHourConfig();
         boolean isRequire2 = this.scheduleRepository.checkHaveRequire2();
+
+        this.configService.updateDrive(this.scheduleRepository.findDriver());
 
         if (isRequire2) {
             findRouteRequire2(technician1TargetHour, technician2TargetHour, technician3TargetHour);
         } else {
             findRouteRequire1(technician1TargetHour, technician2TargetHour, technician3TargetHour);
         }
+
+        updateServiceTime();
+        this.requestService.updateServiceDate();
+    }
+
+    private void updateServiceTime() throws ParseException {
+        List<Schedule> schedules = this.scheduleRepository.findSchedulesByRequestIsNotNullOrderByTechnicianIdAscSequenceAsc();
+
+        int technicianId = schedules.get(0).getTechnician().getId();
+        Date dateNoon = new SimpleDateFormat("HH:mm:ss").parse("12:00:00");
+
+        Date dateStart = new SimpleDateFormat("HH:mm:ss").parse("08:00:00");
+        Calendar calendarStart = Calendar.getInstance();
+        calendarStart.setTime(dateStart);
+
+        Date dateEnd = new SimpleDateFormat("HH:mm:ss").parse("08:00:00");
+        Calendar calendarEnd = Calendar.getInstance();
+        calendarEnd.setTime(dateEnd);
+
+        int i = 0;
+        int prevRequestHour = 0;
+        for (Schedule schedule: schedules) {
+            Time startTime;
+
+            if (technicianId != schedule.getTechnician().getId()) {
+                i = 0;
+                technicianId = schedule.getTechnician().getId();
+                calendarStart.setTime(dateStart);
+                calendarEnd.setTime(dateEnd);
+                startTime = addTime(calendarStart, 0);
+            } else {
+                startTime = addTime(calendarStart, prevRequestHour);
+                if (startTime.toString().equals("12:00:00")) {
+                    startTime = addTime(calendarStart, 1);
+                    calendarEnd.add(Calendar.HOUR, 1);
+                }
+            }
+
+            schedule.setServiceStartTime(startTime);
+
+            Time endTime = addTime(calendarEnd, schedule.getRequestHour());
+            if (startTime.before(dateNoon) && endTime.after(dateNoon)) {
+                endTime = addTime(calendarEnd, 1);
+                calendarStart.add(Calendar.HOUR, 1);
+            }
+            schedule.setServiceEndTime(endTime);
+
+            prevRequestHour = schedule.getRequestHour();
+            i++;
+
+            this.scheduleRepository.saveAndFlush(schedule);
+        }
+    }
+
+    private Time addTime(Calendar current, int amount) {
+        current.add(Calendar.HOUR, amount);
+        Time time = Time.valueOf("08:00:00");
+        time.setTime(current.getTime().getTime());
+        return time;
     }
 
     private void findRouteRequire2(int technician1TargetHour, int technician2TargetHour, int technician3TargetHour) {
@@ -777,7 +866,7 @@ public class ScheduleService {
             this.stgScheduleService.prepareSchedule(require2TechnicianId);
         }
 
-        int driver = this.scheduleRepository.findDriver();
+        int driver = this.configService.getConfigByKey(KEY_DRIVER);
         boolean isMove = false;
         do {
             processFindRoute(technician1TargetHour, technician2TargetHour, technician3TargetHour, driver);
@@ -793,7 +882,7 @@ public class ScheduleService {
     }
 
     private void findRouteRequire1(int technician1TargetHour, int technician2TargetHour, int technician3TargetHour) {
-        int driver = this.scheduleRepository.findDriver();
+        int driver = this.configService.getConfigByKey(KEY_DRIVER);
 
         do {
             processFindRoute(technician1TargetHour, technician2TargetHour, technician3TargetHour, driver);
@@ -1294,7 +1383,7 @@ public class ScheduleService {
 
         keepWorking = true;
         int totalHour = taskList.stream().mapToInt(Schedule::getRequestHour).sum();
-        if (totalHour <= diffHour) {
+        if (totalHour <= diffHour || diffHour == 0) {
             updateSequenceTask(taskList);
         } else {
             List<Schedule> sortedTaskList = taskList.stream().sorted(Comparator.comparingInt(Schedule::getRequestHour)).toList();
@@ -1583,6 +1672,10 @@ public class ScheduleService {
             return technician1TotalHour != technician1TargetHour || technician2TotalHour != technician2TargetHour;
         }
 
+        if (technician1TargetHour != 0) {
+            return technician1TotalHour != technician1TargetHour;
+        }
+
         return true;
     }
 
@@ -1801,6 +1894,7 @@ public class ScheduleService {
                 Tenant tenant = this.tenantService.getTenantByUserId(schedule.getRequest().getUser().getId());
                 scheduleDto.setRoomNo(tenant.getRoomNo());
                 scheduleDto.setRequestType(schedule.getRequest().getRequestType().getName());
+                scheduleDto.setRequestHour(schedule.getRequestHour());
             }
             scheduleDto.setApartmentName(schedule.getApartment().getName());
 
@@ -1810,16 +1904,31 @@ public class ScheduleService {
         return scheduleDtos;
     }
 
-    public void closeTask(Integer scheduleId, Integer requestId) {
+    public void closeTask(Integer scheduleId, Integer requestId, String action) {
         Schedule schedule = this.scheduleRepository.findScheduleById(scheduleId);
         this.scheduleRepository.closeTask(schedule.getTechnician().getId(), schedule.getSequence());
 
         List<Schedule> schedules = this.scheduleRepository.findSchedulesByRequestId(requestId);
         if (schedules.isEmpty()) {
             Request request = this.requestService.getRequestById(requestId);
-            request.setStatus(STATUS_DONE);
+            if (action.equals("cancel")) {
+                request.setStatus(STATUS_READY_FOR_PLAN);
+            } else if (action.equals("close")) {
+                request.setStatus(STATUS_DONE);
+            }
 
             this.requestService.updateRequest(requestId, request);
         }
+    }
+
+    public boolean checkDriver(Integer userId) {
+        Technician technician = this.technicianService.getTechnicianByUserId(userId);
+
+        int driver = this.configService.getConfigByKey(KEY_DRIVER);
+        return driver == technician.getId();
+    }
+
+    public Schedule getScheduleById(Integer id) {
+        return this.scheduleRepository.findScheduleById(id);
     }
 }

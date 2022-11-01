@@ -2,7 +2,6 @@ package com.example.servicemanagement.controller;
 
 import com.example.servicemanagement.dto.*;
 import com.example.servicemanagement.entity.Request;
-import com.example.servicemanagement.repository.RequestRepository;
 import com.example.servicemanagement.service.RequestService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -15,9 +14,6 @@ public class RequestController {
 
     @Autowired
     RequestService requestService;
-
-    @Autowired
-    RequestRepository requestRepository;
 
     @PostMapping("/")
     public void createRequest(
@@ -44,7 +40,7 @@ public class RequestController {
     @GetMapping("/status/ready-for-estimation")
     public List<EstimateDto> getAllEstimationRequest(
     ) {
-        return this.requestService.getAllEstimateRequest();
+        return this.requestService.getAllEstimateRequestV2();
     }
 
     @GetMapping("/estimate-value")

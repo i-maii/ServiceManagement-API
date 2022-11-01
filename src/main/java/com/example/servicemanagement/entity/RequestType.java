@@ -24,4 +24,7 @@ public class RequestType {
     @OneToOne
     @JoinColumn(name = "role_id")
     private Role role;
+
+    @Column(name = "is_common_area")
+    private boolean commonArea;
 }

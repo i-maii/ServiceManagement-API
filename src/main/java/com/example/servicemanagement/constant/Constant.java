@@ -20,6 +20,7 @@ public class Constant {
     public static String KEY_TOTAL_PRIORITY_HOUR = "KEY_TOTAL_PRIORITY_HOUR";
     public static String KEY_LOWEST_TOTAL_PRIORITY_HOUR = "KEY_LOWEST_TOTAL_PRIORITY_HOUR";
     public static String KEY_LOWEST_TOTAL_REQUEST_HOUR = "KEY_LOWEST_TOTAL_REQUEST_HOUR";
+    public static String KEY_DRIVER = "KEY_DRIVER";
 
     public static String STATUS_READY_FOR_ESTIMATION = "READY FOR ESTIMATION";
     public static String STATUS_READY_FOR_PLAN = "READY FOR PLAN";

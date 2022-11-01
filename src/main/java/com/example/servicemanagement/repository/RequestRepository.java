@@ -11,7 +11,7 @@ import java.util.List;
 public interface RequestRepository extends JpaRepository<Request, Integer> {
     Request findRequestById(Integer id);
     List<Request> findRequestsByStatus(String status);
-    List<Request> findRequestsByStatusIn(List<String> status);
+    List<Request> findRequestsByStatusInOrderByEstimateTimeAscEstimateTechnicianAsc(List<String> status);
     List<Request> findRequestsByUserIdOrderByRequestDateDesc(Integer userId);
     List<Request> findRequestsByStatusAndRequestTypeIn(String status, List<RequestType> requestType);
 }

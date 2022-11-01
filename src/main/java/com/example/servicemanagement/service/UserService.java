@@ -7,6 +7,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.List;
+
 import static com.example.servicemanagement.constant.Constant.ERR_WRONG_USERNAME_PASSWORD;
 
 @Service
@@ -45,5 +47,20 @@ public class UserService {
 
     public void delete(Integer id) {
         this.userRepository.deleteById(id);
+    }
+
+    public void saveNotificationToken(Integer userId, String token) {
+        User user = this.userRepository.findUserById(userId);
+        user.setNotificationToken(token);
+
+        this.userRepository.saveAndFlush(user);
+    }
+
+    public List<User> getUserByRoleId(Integer roleId) {
+        return this.userRepository.findUsersByRoleId(roleId);
+    }
+
+    public List<User> getUserByRoleNames(List<String> roleName) {
+        return this.userRepository.findUsersByRoleNameIn(roleName);
     }
 }

@@ -30,10 +30,6 @@ public class Request {
     @JoinColumn(name = "apartment_id")
     private Apartment apartment;
 
-    private String name;
-
-    private String phoneNo;
-
     private String status;
 
     private String detail;
@@ -45,4 +41,6 @@ public class Request {
     private Integer estimateTechnician;
 
     private Integer priority;
+
+    private Date serviceDate;
 }

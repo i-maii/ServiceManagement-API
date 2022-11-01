@@ -31,14 +31,6 @@ public class TechnicianService {
     @Autowired
     RoleService roleService;
 
-    public int getNumberOfAvailableTechnician() {
-        return this.technicianRepository.countTechnicianByAvailable(true);
-    }
-
-    public List<Technician> getAvailableTechnician() {
-        return this.technicianRepository.findTechniciansByAvailable(true);
-    }
-
     public List<Technician> getAllTechnician() {
         return this.technicianRepository.findAll();
     }
@@ -55,20 +47,9 @@ public class TechnicianService {
         return this.technicianRepository.findLowestTechnician();
     }
 
-    public boolean checkLowestAbilitiesTechnicianAvailable() {
-        return this.technicianRepository.isLowestAbilitiesTechnicianAvailable();
-    }
 
     public List<Integer> getAllRequestTypeOfLowestTechnician() {
         return this.technicianRepository.findRequestTypeOfLowestTechnician();
-    }
-
-    public List<Integer> getPriorityRequestTypeOfLowestTechnician() {
-        return this.technicianRepository.findPriorityRequestTypeOfLowestTechnician();
-    }
-
-    public List<Technician> getTechnicianSchedule() {
-        return this.technicianRepository.findTechnicianSchedule();
     }
 
     public Technician getTechnicianByUserId(Integer userId) {

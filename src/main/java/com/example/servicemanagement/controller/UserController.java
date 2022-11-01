@@ -6,10 +6,7 @@ import com.example.servicemanagement.service.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping(value="/user")
@@ -24,5 +21,12 @@ public class UserController {
     public User login(
             @RequestBody LoginDto loginDto) {
         return this.userService.login(loginDto.getUsername(), loginDto.getPassword());
+    }
+
+    @PostMapping("/{userId}/notification-token/{token}")
+    public void saveNotificationToken(
+            @PathVariable("userId") Integer userId,
+            @PathVariable("token") String token) {
+        this.userService.saveNotificationToken(userId, token);
     }
 }
