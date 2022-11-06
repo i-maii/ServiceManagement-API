@@ -23,13 +23,18 @@ public interface ApartmentRepository extends JpaRepository<Apartment, Integer> {
 
     @Query(nativeQuery = true, value = "SELECT CASE WHEN COUNT(*) > 0 THEN 'true' ELSE 'false' END " +
             "FROM APARTMENT " +
-            "WHERE name = :name")
-    boolean checkCreateDuplicate(@Param("name") String name);
+            "WHERE name = :name " +
+            "AND latitude = :latitude " +
+            "AND longitude = :longitude")
+    boolean checkCreateDuplicate(@Param("name") String name, @Param("latitude") Double latitude, @Param("longitude") Double longitude);
 
     @Query(nativeQuery = true, value = "SELECT CASE WHEN COUNT(*) > 0 THEN 'true' ELSE 'false' END " +
             "FROM APARTMENT " +
-            "WHERE id != :id AND name = :name")
-    boolean checkUpdateDuplicate(@Param("id") Integer id, @Param("name") String name);
+            "WHERE id != :id " +
+            "AND name = :name " +
+            "AND latitude = :latitude " +
+            "AND longitude = :longitude")
+    boolean checkUpdateDuplicate(@Param("id") Integer id, @Param("name") String name, @Param("latitude") Double latitude, @Param("longitude") Double longitude);
 
     @Query(nativeQuery = true, value = "SELECT CASE WHEN COUNT(*) > 0 THEN 'false' ELSE 'true' END " +
             "FROM TENANT " +

@@ -23,6 +23,7 @@ import static com.example.servicemanagement.constant.Constant.*;
 public class ScheduleService {
 
     private static Logger logger = LoggerFactory.getLogger(ScheduleService.class);
+    private SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     private int totalApartment = 6;
     private long totalDate = Long.MAX_VALUE;
@@ -58,7 +59,7 @@ public class ScheduleService {
     PushNotificationService pushNotificationService;
 
     public void findRequestPlan() throws ParseException {
-        logger.info("---- start finding request plan ----");
+        logger.info("---- เริ่มหาแผนงานสำหรับช่าง ----");
         this.configService.findConfiguration();
 
         Integer[] rangePriorityHour = this.configService.getRangePriorityHour();
@@ -75,6 +76,7 @@ public class ScheduleService {
             List<TechnicianPlanDto> requestListForPlan = new ArrayList<>(this.requestService.requestListToTechnicianPlan(allRequest));
             List<TechnicianPlanDto> priorityRequestList = new ArrayList<>(requestListForPlan.stream().filter(req -> MOST_PRIORITY.contains(req.getPriority())).toList());
             if (haveOlderRequest) {
+                logger.info("**** มีรายการซ่อมตกค้างจากสัปดาห์ก่อนหน้า ****");
                 requestListForPlan = this.requestService.reorderPriority(allRequest);
                 priorityRequestList = requestListForPlan.stream().filter(req -> ALL_PRIORITY.contains(req.getPriority())).toList();
             }
@@ -97,14 +99,22 @@ public class ScheduleService {
                     List<TechnicianPlanDto> requestList = findRequestList(totalPriorityHour, totalTargetHour, totalRequestHour, requestListForPlan, priorityRequestList);
 
                     if (usageTechnician == 1) {
+                        logger.info("---- แผนงานสำหรับช่างคนที่ 1 ----");
+                        logTechnicianPlanDto(requestList);
+                        logger.info("-----------------------------\n");
                         List<List<TechnicianPlanDto>> planForTechnician1 = new ArrayList<>();
                         planForTechnician1.add(requestList);
                         saveTechnicianPlan(planForTechnician1);
                     } else {
+                        logger.info("---- รายการงานซ่อมสำหรับช่าง 2 คน ----");
+                        logTechnicianPlanDto(requestList);
+                        logger.info("-----------------------------------\n");
                         findTechnicianPlanFor2Technician(targetHour, rangePriorityHour, requestList, 2, null);
                     }
                 }
             }
+
+            logger.info("-----------------------------\n");
 
             boolean isAlreadyFindRoute = this.scheduleRepository.checkAlreadyFindRoute();
             if (!isAlreadyFindRoute) {
@@ -133,22 +143,40 @@ public class ScheduleService {
     }
 
     private List<List<TechnicianPlanDto>> findTechnicianPlanForLowestTechnician(Integer[] targetHour, List<TechnicianPlanDto> allRequest, Integer[] lowestRangePriority) {
+        logger.info("---- เริ่มหาแผนงานสำหรับช่างที่มีความสามารถน้อยที่สุด ----");
         List<TechnicianPlanDto> lowestTechnicianRequest = this.requestService.getLowestRequest(allRequest).stream().sorted(Comparator.comparingInt(TechnicianPlanDto::getEstimateTime)).toList();
+
         int totalLowestRequestHour = this.configService.getTotalLowestRequestHour();
 
         List<List<TechnicianPlanDto>> possibleLowestPlanList = new ArrayList<>();
         if (totalLowestRequestHour > targetHour[2]) {
+            logger.info("**** จำนวนชั่วโมงรวมของงานที่ตรงกับความสามารถของช่าง: {} มากกว่า จำนวนชั่วโมงที่ช่างสามารถทำได้: {} ****", totalLowestRequestHour, targetHour[2]);
+            logger.info("---- รายการงานซ่อมที่ตรงกับความสามารถของช่าง ----");
+            logTechnicianPlanDto(lowestTechnicianRequest);
+            logger.info("--------------------------------------------\n");
             totalApartment = 6;
             List<TechnicianPlanDto> possibleLowestPlan = new ArrayList<>();
             findPossibleRequest(possibleLowestPlanList, possibleLowestPlan, targetHour[2], lowestTechnicianRequest, 0, lowestRangePriority);
+            if (possibleLowestPlanList.size() > 1) {
+                logger.info("**** แผนงานสำหรับช่างที่มีความสามารถน้อยที่สุดมีมากกว่า 1 แผนงาน ****");
+                logger.info("---- รายการแผนงานสำหรับช่างที่มีความสามารถน้อยที่สุด ----");
+                logListTechnicianPlanDto(possibleLowestPlanList);
+                logger.info("------------------------------------------------\n");
+            }
         } else {
+            logger.info("**** จำนวนชั่วโมงรวมของงานที่ตรงกับความสามารถของช่าง: {} น้อยกว่าหรือเท่ากับ จำนวนชั่วโมงที่ช่างสามารถทำได้: {} ****", totalLowestRequestHour, targetHour[2]);
+            logger.info("---- แผนงานสำหรับช่างที่มีความสามารถน้อยที่สุด ----");
+            logTechnicianPlanDto(lowestTechnicianRequest);
+            logger.info("------------------------------------------\n");
             possibleLowestPlanList.add(lowestTechnicianRequest);
         }
 
+        logger.info("-----------------------------------------------\n");
         return possibleLowestPlanList;
     }
 
     private void findTechnicianPlanFor2Technician(Integer[] targetHour, Integer[] range, List<TechnicianPlanDto> requestList, int numOfTechnician, List<TechnicianPlanDto> technician3Plan) {
+        logger.info("---- เริ่มหาแผนงานสำหรับช่าง 2 คน ----");
         List<TechnicianPlanDto> sortedRequestList = requestList.stream().sorted(Comparator.comparingInt(TechnicianPlanDto::getEstimateTime)).toList();
 
         totalApartment = 6;
@@ -157,10 +185,12 @@ public class ScheduleService {
         findPossibleRequest(possiblePlanListForTechnician1, possiblePlanForTechnician1, targetHour[0], sortedRequestList, 0, range);
 
         if (possiblePlanListForTechnician1.size() > 1) {
+            logger.info("**** ช่างคนที่ 1 มีแผนงานมากกว่า 1 แผนงาน ****");
             List<List<TechnicianPlanDto>> possiblePlanListForTechnician2 = new ArrayList<>();
             List<List<TechnicianPlanDto>> tempPossiblePlanListForTechnician1 = new ArrayList<>();
             totalApartment = 6;
 
+            logger.info("**** เลือกแผนงานที่มีจำนวนหอน้อยที่สุด ****");
             for (List<TechnicianPlanDto> plan : possiblePlanListForTechnician1) {
                 List<TechnicianPlanDto> possiblePlanForTechnician2 = new ArrayList<>(requestList.stream().filter(Predicate.not(plan::contains)).toList());
                 int numOfApartment = this.findNumberOfApartment(possiblePlanForTechnician2);
@@ -177,36 +207,74 @@ public class ScheduleService {
             }
 
             if (tempPossiblePlanListForTechnician1.size() > 1) {
+                logger.info("**** แผนงานที่มีจำนวนหอน้อยที่สุดมีมากกว่า 1 แผนงาน ****");
+                logger.info("---- รายการแผนงานที่เป็นไปได้สำหรับช่างคนที่ 1 ----");
+                logListTechnicianPlanDto(tempPossiblePlanListForTechnician1);
+                logger.info("-------------------------------------------\n");
+                logger.info("---- รายการแผนงานที่เป็นไปได้สำหรับช่างคนที่ 2 ----");
+                logListTechnicianPlanDto(possiblePlanListForTechnician2);
+                logger.info("-------------------------------------------\n");
+                logger.info("**** หาแผนงานที่มีเส้นทางการเดินทางสั้นที่สุด ****");
                 checkBestRoute(tempPossiblePlanListForTechnician1, possiblePlanListForTechnician2, technician3Plan, false, numOfTechnician);
             } else {
+                logger.info("**** แผนงานที่มีจำนวนหอน้อยที่สุดมี 1 แผนงาน ****");
                 List<List<TechnicianPlanDto>> planList = new ArrayList<>();
                 planList.addAll(tempPossiblePlanListForTechnician1);
                 planList.addAll(possiblePlanListForTechnician2);
+                logger.info("---- แผนงานสำหรับช่างคนที่ 1 ----");
+                logTechnicianPlanDto(tempPossiblePlanListForTechnician1.get(0));
+                logger.info("-----------------------------\n");
+                logger.info("---- แผนงานสำหรับช่างคนที่ 2 ----");
+                logTechnicianPlanDto(possiblePlanListForTechnician2.get(0));
+                logger.info("-----------------------------\n");
                 saveTechnicianPlan(planList);
             }
         } else {
             List<TechnicianPlanDto> planForTechnician2 = requestList.stream().filter(Predicate.not(possiblePlanListForTechnician1.get(0)::contains)).toList();
+
+            logger.info("---- แผนงานสำหรับช่างคนที่ 1 ----");
+            logTechnicianPlanDto(possiblePlanListForTechnician1.get(0));
+            logger.info("-----------------------------\n");
+            logger.info("---- แผนงานสำหรับช่างคนที่ 2 ----");
+            logTechnicianPlanDto(planForTechnician2);
+            logger.info("-----------------------------\n");
+
             possiblePlanListForTechnician1.add(planForTechnician2);
 
             saveTechnicianPlan(possiblePlanListForTechnician1);
         }
+        logger.info("----------------------------------\n");
     }
 
     private void findTechnicianPlanFor3Technician(List<TechnicianPlanDto> allRequest, Integer[] lowestRangePriority, Integer[] targetHour) {
+        logger.info("---- เริ่มหาแผนงานสำหรับช่าง 3 คน ----");
         List<List<TechnicianPlanDto>> possibleLowestPlanList = findTechnicianPlanForLowestTechnician(targetHour, allRequest, lowestRangePriority);
 
         List<List<TechnicianPlanDto>> otherRequestList = new ArrayList<>();
+        List<TechnicianPlanDto> bestRequest;
         if (possibleLowestPlanList.size() > 1) {
+            logger.info("**** หารายการงานซ่อมที่มีจำนวนชั่วโมงรวมเท่ากับจำนวนที่ช่างสามารถทำได้สำหรับช่างอีก 2 คน ****");
+            int i = 1;
             for (List<TechnicianPlanDto> lowestPlan: possibleLowestPlanList) {
                 List<TechnicianPlanDto> possibleOtherPlanList = findOtherRequestList(allRequest, lowestPlan, targetHour);
+                logger.info("---- รายการงานซ่อมสำหรับช่อมสำหรับช่างอีก 2 คน จากแผนงานที่ {} ----", i);
+                logTechnicianPlanDto(possibleOtherPlanList);
+                logger.info("-----------------------------------------------------------\n");
                 otherRequestList.add(possibleOtherPlanList);
+                i++;
             }
+
+            logger.info("**** หารายการงานซ่อมที่มีจำนวนงาน priority ลำดับที่ 1 และ 2 มากที่สุด ****");
+            bestRequest = checkBestRequest(otherRequestList).stream().sorted(Comparator.comparingInt(TechnicianPlanDto::getEstimateTime)).toList();
         } else {
             List<TechnicianPlanDto> requestList = findOtherRequestList(allRequest, possibleLowestPlanList.get(0), targetHour);
-            otherRequestList.add(requestList);
+            bestRequest = requestList;
+            bestRequestPlanId = 0;
         }
 
-        List<TechnicianPlanDto> bestRequest = checkBestRequest(otherRequestList).stream().sorted(Comparator.comparingInt(TechnicianPlanDto::getEstimateTime)).toList();
+        logger.info("---- รายการงานซ่อมสำหรับช่างอีก 2 คน ----");
+        logTechnicianPlanDto(bestRequest);
+        logger.info("-------------------------------------\n");
 
         //save plan for lowestTechnician
         List<TechnicianPlanDto> lowestTechnicianPlan = possibleLowestPlanList.get(bestRequestPlanId);
@@ -215,9 +283,12 @@ public class ScheduleService {
         Integer[] rangePriority = this.configService.getRangePriorityHour();
 
         findTechnicianPlanFor2Technician(targetHour, rangePriority, bestRequest, 3, lowestTechnicianPlan);
+
+        logger.info("----------------------------------\n");
     }
 
     private void findRequire2TechnicianPlanFor2Technician(List<TechnicianPlanDto> allRequest, Integer[] targetHour, int numOfTechnician, List<TechnicianPlanDto> technician3Plan) {
+        logger.info("---- เริ่มหาแผนงานสำหรับช่าง 2 คน ----");
         List<TechnicianPlanDto> requestList = allRequest.stream().filter(req -> req.getRequest().getEstimateTechnician() == 1).toList();
         List<TechnicianPlanDto> require2RequestList = allRequest.stream().filter(Predicate.not(requestList::contains)).toList();
         List<TechnicianPlanDto> sortedRequestList = requestList.stream().sorted(Comparator.comparingInt(TechnicianPlanDto::getEstimateTime)).toList();
@@ -229,10 +300,12 @@ public class ScheduleService {
         findPossibleOtherRequire2Request(possiblePlanListForTechnician1, possiblePlanForTechnician1, target, sortedRequestList, 0);
 
         if (possiblePlanListForTechnician1.size() > 1) {
+            logger.info("**** ช่างคนที่ 1 มีแผนงานมากกว่า 1 แผนงาน ****");
             List<List<TechnicianPlanDto>> possiblePlanListForTechnician2 = new ArrayList<>();
             List<List<TechnicianPlanDto>> tempPossiblePlanListForTechnician1 = new ArrayList<>();
             totalApartment = 6;
 
+            logger.info("**** เลือกแผนงานที่มีจำนวนหอน้อยที่สุด ****");
             for (List<TechnicianPlanDto> plan: possiblePlanListForTechnician1) {
                 List<TechnicianPlanDto> planForTech1 = new ArrayList<>(require2RequestList);
                 planForTech1.addAll(plan);
@@ -254,11 +327,26 @@ public class ScheduleService {
             }
 
             if (tempPossiblePlanListForTechnician1.size() > 1) {
+                logger.info("**** แผนงานที่มีจำนวนหอน้อยที่สุดมีมากกว่า 1 แผนงาน ****");
+                logger.info("---- รายการแผนงานที่เป็นไปได้สำหรับช่างคนที่ 1 ----");
+                logListTechnicianPlanDto(tempPossiblePlanListForTechnician1);
+                logger.info("-------------------------------------------\n");
+                logger.info("---- รายการแผนงานที่เป็นไปได้สำหรับช่างคนที่ 2 ----");
+                logListTechnicianPlanDto(possiblePlanListForTechnician2);
+                logger.info("-------------------------------------------\n");
+                logger.info("**** หาแผนงานที่มีเส้นทางการเดินทางสั้นที่สุด ****");
                 checkBestRoute(tempPossiblePlanListForTechnician1, possiblePlanListForTechnician2, technician3Plan, true, numOfTechnician);
             } else {
+                logger.info("**** แผนงานที่มีจำนวนหอน้อยที่สุดมี 1 แผนงาน ****");
                 List<List<TechnicianPlanDto>> planList = new ArrayList<>();
                 planList.add(tempPossiblePlanListForTechnician1.get(0));
                 planList.add(possiblePlanListForTechnician2.get(0));
+                logger.info("---- แผนงานสำหรับช่างคนที่ 1 ----");
+                logTechnicianPlanDto(tempPossiblePlanListForTechnician1.get(0));
+                logger.info("-----------------------------\n");
+                logger.info("---- แผนงานสำหรับช่างคนที่ 2 ----");
+                logTechnicianPlanDto(possiblePlanListForTechnician2.get(0));
+                logger.info("-----------------------------\n");
 
                 saveTechnicianPlan(planList);
             }
@@ -269,34 +357,59 @@ public class ScheduleService {
             List<TechnicianPlanDto> planForTechnician2 = requestList.stream().filter(Predicate.not(possiblePlanListForTechnician1.get(0)::contains)).toList();
             planForTechnician2.addAll(require2RequestList);
 
+            logger.info("---- แผนงานสำหรับช่างคนที่ 1 ----");
+            logTechnicianPlanDto(planForTechnician1);
+            logger.info("-----------------------------\n");
+            logger.info("---- แผนงานสำหรับช่างคนที่ 2 ----");
+            logTechnicianPlanDto(planForTechnician2);
+            logger.info("-----------------------------\n");
+
             List<List<TechnicianPlanDto>> planList = new ArrayList<>();
             planList.add(planForTechnician1);
             planList.add(planForTechnician2);
 
             saveTechnicianPlan(planList);
         }
+
+        logger.info("----------------------------------\n");
     }
 
     private void findRequire2TechnicianPlanFor3Technician(List<TechnicianPlanDto> requestListForPlan, Integer[] lowestRange, Integer[] targetHour) {
+        logger.info("---- เริ่มหาแผนงานสำหรับช่าง 3 คน ----");
         List<List<TechnicianPlanDto>> possibleLowestPlanList = findTechnicianPlanForLowestTechnician(targetHour, requestListForPlan, lowestRange);
 
         List<List<TechnicianPlanDto>> otherRequestList = new ArrayList<>();
+        List<TechnicianPlanDto> bestRequest;
         if (possibleLowestPlanList.size() > 1) {
+            logger.info("**** หารายการงานซ่อมที่มีจำนวนชั่วโมงรวมเท่ากับจำนวนที่ช่างสามารถทำได้สำหรับช่างอีก 2 คน ****");
+            int i = 1;
             for (List<TechnicianPlanDto> possibleLowestPlan: possibleLowestPlanList) {
                 List<TechnicianPlanDto> possibleOtherPlanList = findOtherRequire2RequestList(requestListForPlan, possibleLowestPlan, targetHour);
+                logger.info("---- รายการงานซ่อมสำหรับช่อมสำหรับช่างอีก 2 คน จากแผนงานที่ {} ----", i);
+                logTechnicianPlanDto(possibleOtherPlanList);
+                logger.info("-----------------------------------------------------------\n");
                 otherRequestList.add(possibleOtherPlanList);
+                i++;
             }
+
+            logger.info("**** หารายการงานซ่อมที่มีจำนวนงาน priority ลำดับที่ 1 และ 2 มากที่สุด ****");
+            bestRequest = checkBestRequest(otherRequestList).stream().sorted(Comparator.comparingInt(TechnicianPlanDto::getEstimateTime)).toList();
         } else {
             List<TechnicianPlanDto> possibleOtherPlanList = findOtherRequire2RequestList(requestListForPlan, possibleLowestPlanList.get(0), targetHour);
-            otherRequestList.add(possibleOtherPlanList);
+            bestRequest = possibleOtherPlanList;
+            bestRequestPlanId = 0;
         }
 
-        List<TechnicianPlanDto> bestRequest = checkBestRequest(otherRequestList).stream().sorted(Comparator.comparingInt(TechnicianPlanDto::getEstimateTime)).toList();
+        logger.info("---- รายการงานซ่อมสำหรับช่างอีก 2 คน ----");
+        logTechnicianPlanDto(bestRequest);
+        logger.info("-------------------------------------\n");
 
         List<TechnicianPlanDto> lowestTechnicianPlan = possibleLowestPlanList.get(bestRequestPlanId);
         saveLowestTechnicianPlan(lowestTechnicianPlan);
 
         findRequire2TechnicianPlanFor2Technician(bestRequest, targetHour, 3, lowestTechnicianPlan);
+
+        logger.info("----------------------------------\n");
     }
 
     private void saveTechnicianPlanTemp(List<List<TechnicianPlanDto>> technicianPlanList) {
@@ -487,17 +600,22 @@ public class ScheduleService {
     }
 
     private List<TechnicianPlanDto> findRequestList(int totalPriorityHour, int totalTargetHour, int totalRequestHour, List<TechnicianPlanDto> requestListForPlan, List<TechnicianPlanDto> priorityRequestList) {
+        logger.info("---- เริ่มหารายการงานซ่อมที่มีจำนวนชั่วโมงรวมเท่ากับจำนวนชั่วโมงที่ช่างสามารถทำได้ ----");
+
         if (totalPriorityHour == totalTargetHour) {
+            logger.info("**** จำนวนชั่วโมงรวมของงาน priority ลำดับที่ 1 และ 2: {} เท่ากับ จำนวนชั่วโมงที่ช่างสามารถทำได้: {} ****", totalPriorityHour, totalTargetHour);
             return priorityRequestList;
         }
 
         if (totalRequestHour <= totalTargetHour) {
+            logger.info("**** จำนวนชั่วโมงรวมของงานทั้งหมด: {} น้อยกว่าหรือเท่ากับ จำนวนชั่วโมงที่ช่างสามารถทำได้: {} ****", totalRequestHour, totalTargetHour);
             return requestListForPlan;
         }
 
         List<List<TechnicianPlanDto>> possibleRequestList = new ArrayList<>();
         List<TechnicianPlanDto> possibleRequest = new ArrayList<>();
         if (totalPriorityHour > totalTargetHour) {
+            logger.info("**** จำนวนชั่วโมงรวมของงาน priority ลำดับที่ 1 และ 2: {} มากกว่า จำนวนชั่วโมงที่ช่างสามารถทำได้: {} ****", totalPriorityHour, totalTargetHour);
             List<TechnicianPlanDto> returnList = new ArrayList<>();
             List<TechnicianPlanDto> priority1RequestList = priorityRequestList.stream().filter(req -> req.getPriority() == 1).toList();
             int priority1Hour = priority1RequestList.stream().mapToInt(TechnicianPlanDto::getEstimateTime).sum();
@@ -785,6 +903,7 @@ public class ScheduleService {
     }
 
     public void findRoute() throws NoSuchElementException, ParseException {
+        logger.info("---- เริ่มจัดเส้นทางการเดินทาง ----");
         int technician1TargetHour = this.configService.getTechnician1TargetHourConfig();
         int technician2TargetHour = this.configService.getTechnician2TargetHourConfig();
         int technician3TargetHour = this.configService.getTechnician3TargetHourConfig();
@@ -800,6 +919,7 @@ public class ScheduleService {
 
         updateServiceTime();
         this.requestService.updateServiceDate();
+        logger.info("------------------------------\n");
     }
 
     private void updateServiceTime() throws ParseException {
@@ -884,6 +1004,7 @@ public class ScheduleService {
     private void findRouteRequire1(int technician1TargetHour, int technician2TargetHour, int technician3TargetHour) {
         int driver = this.configService.getConfigByKey(KEY_DRIVER);
 
+        logger.info("**** ช่าง {} เป็นคนขับ ****", this.technicianService.getTechnicianById(driver).getUser().getName());
         do {
             processFindRoute(technician1TargetHour, technician2TargetHour, technician3TargetHour, driver);
         } while (isContinue(technician1TargetHour, technician2TargetHour, technician3TargetHour));
@@ -903,6 +1024,7 @@ public class ScheduleService {
             if (!oneApartmentIds.isEmpty()) {
                 allTaskList = this.scheduleRepository.findSchedulesNearestOneApartment(driverLatestApartmentId, oneApartmentIds);
 
+                logger.info("**** มีช่างทำงานที่หอเดียว (หอ {}) ****", allTaskList.get(0).getApartment().getName());
                 boolean isAllHaveSameApartment = allTaskList.stream().map(Schedule::getTechnician).distinct().toList().size() == numOfTechnician;
                 // filter list เอางานของช่างที่เป็นคนขับออก
                 // isAllHaveSameApartment = false && driverHaveSameApartment = false
@@ -939,6 +1061,8 @@ public class ScheduleService {
                 if (!sameApartmentIds.isEmpty()) {
                     allTaskList = this.scheduleRepository.findSchedulesNearestOneApartment(driverLatestApartmentId, sameApartmentIds);
                     driverTaskList = allTaskList.stream().filter(sch -> sch.getTechnician().getId().equals(driver)).toList();
+
+                    logger.info("**** มีช่างทำงานที่หอเดียวกันทั้งหมด (หอ {}) ****", allTaskList.get(0).getApartment().getName());
                 } else { // ไม่มีช่างทำงานที่หอเดียวกันทุกคน
                     if (numOfTechnician == 3) {
                         sameApartmentIds = this.scheduleRepository.findSameApartmentIds(numOfTechnician - 1);
@@ -957,6 +1081,8 @@ public class ScheduleService {
                     } else { // case2-3: ช่าง 2 คน A และ B ไม่มีงานที่หอเดียวกัน
                         allTaskList = findNearestTaskExceptDriver(driverLatestApartmentId, driver);
                     }
+
+                    logger.info("**** ไม่มีช่างทำงานที่หอเดียวกันทุกคนไปหอที่ใกล้กับจุดที่ช่างอยู่ (หอ {}) ****", allTaskList.get(0).getApartment().getName());
                 }
             }
             technicianListForAddRoute = findTechnicianForAddRoute(technician1TargetHour, technician2TargetHour, technician3TargetHour);
@@ -966,6 +1092,8 @@ public class ScheduleService {
             List<Technician> technicianTaskList = allTaskList.stream().map(Schedule::getTechnician).distinct().toList();
             technicianListForAddRoute = findTechnicianForAddRoute(technician1TargetHour, technician2TargetHour, technician3TargetHour);
             technicianListForAddRoute.removeIf(tech -> !technicianTaskList.contains(tech) && !tech.getId().equals(driver));
+
+            logger.info("**** หอที่ใกล้กับจุดที่ช่างที่มีจำนวนชั่วโมงน้อยที่สุดอยู่ (หอ {}) ****", allTaskList.get(0).getApartment().getName());
         }
 
         int nextApartment = allTaskList.get(0).getApartment().getId();
@@ -1930,5 +2058,37 @@ public class ScheduleService {
 
     public Schedule getScheduleById(Integer id) {
         return this.scheduleRepository.findScheduleById(id);
+    }
+
+    private void logListTechnicianPlanDto(List<List<TechnicianPlanDto>> planLists) {
+        int i = 1;
+        for (List<TechnicianPlanDto> planList: planLists) {
+            logger.info("---- แผนงานที่ {} ----", i);
+            logTechnicianPlanDto(planList);
+            logger.info("--------------------");
+            i++;
+        }
+    }
+
+    private void logTechnicianPlanDto(List<TechnicianPlanDto> planList) {
+        for (TechnicianPlanDto plan: planList) {
+            logger.info("เลขที่แจ้งซ่อม: {}, หอ: {}, งานซ่อม: {}, ลำดับความสำคัญ: {}, วันที่แจ้งซ่อม: {}, เวลาที่ใช้: {}"
+                    , plan.getRequestId()
+                    , plan.getApartment().getName()
+                    , plan.getRequest().getRequestType().getName()
+                    , plan.getPriority()
+                    , plan.getRequest().getRequestDate()
+                    , plan.getEstimateTime());
+        }
+    }
+
+    private void logSchedule(List<Schedule> scheduleList) {
+        for (Schedule schedule: scheduleList) {
+            logger.info("เลขที่แจ้งซ่อม: {}, หอ: {}, งานซ่อม: {}, เวลาที่ใช้: {}"
+                    , schedule.getRequest().getId()
+                    , schedule.getApartment().getName()
+                    , schedule.getRequest().getRequestType().getName()
+                    , schedule.getRequestHour());
+        }
     }
 }

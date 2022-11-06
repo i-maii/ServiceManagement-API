@@ -24,7 +24,7 @@ public class ConfigService {
     RequestService requestService;
 
     public void findConfiguration() {
-        logger.info("---- start finding config ----");
+        logger.info("---- เริ่มคำนวณหาจำนวนชั่วโมงและจำนวนช่าง ----");
         List<Request> allRequest = this.requestService.getRequestByStatus(STATUS_READY_FOR_PLAN);
         boolean require2Technician = this.requestService.checkRequire2Technician(allRequest);
 
@@ -39,8 +39,8 @@ public class ConfigService {
 
         updateConfigByKey(KEY_TOTAL_REQUEST_HOUR, String.valueOf(totalRequestHour));
         updateConfigByKey(KEY_TOTAL_PRIORITY_HOUR, String.valueOf(totalPriorityRequestHour));
-        logger.info("totalRequestHour: {} hr", totalRequestHour);
-        logger.info("totalPriorityRequestHour: {} hr", totalPriorityRequestHour);
+        logger.info("จำนวนชั่วโมงรวมของรายการแจ้งซ่อมทั้งหมด: {} ชั่วโมง", totalRequestHour);
+        logger.info("จำนวนชั่วโมงรวมของงานที่มีลำดับความสำคัญลำดับที่ 1 และ 2: {} ชั่วโมง", totalPriorityRequestHour);
 
         if (totalRequestHour > 16 && totalRequestHour <= 20) {
             if (totalPriorityRequestHour > 16) {
@@ -59,7 +59,7 @@ public class ConfigService {
         }
 
         updateConfigByKey(KEY_USAGE_TECHNICIAN, String.valueOf(usageTechnician));
-        logger.info("usageTechnician: {} hr", usageTechnician);
+        logger.info("จำนวนช่างซ่อมที่ต้องใช้: {} คน", usageTechnician);
 
         int priorityHourMin = 0;
         int priorityHourMax = 0;
@@ -133,7 +133,7 @@ public class ConfigService {
         }
 
         updateConfigByKey(KEY_TOTAL_TARGET_HOUR, String.valueOf(totalTargetHour));
-        logger.info("totalTargetHour: {} hr", totalTargetHour);
+        logger.info("จำนวนชั่วโมงรวมของงานที่ต้องทำ: {} ชั่วโมง", totalTargetHour);
 
         String targetHour1 = String.valueOf(targetHour[0]);
         String targetHour2 = "0";
@@ -145,30 +145,32 @@ public class ConfigService {
         } else if (targetHour.length == 3) {
             targetHour2 = String.valueOf(targetHour[1]);
             targetHour3 = String.valueOf(targetHour[2]);
+            technician3TotalRequestHour = String.valueOf(lowestTotalRequestHour);
+            technician3TotalPriorityHour = String.valueOf(lowestTotalRequestHour);
         }
 
         updateConfigByKey(KEY_TECHNICIAN_TARGET_HOUR_1, targetHour1);
         updateConfigByKey(KEY_TECHNICIAN_TARGET_HOUR_2, targetHour2);
         updateConfigByKey(KEY_TECHNICIAN_TARGET_HOUR_3, targetHour3);
-        logger.info("technician1 targetHour: {} hr", targetHour1);
-        logger.info("technician2 targetHour: {} hr", targetHour2);
-        logger.info("technician3 targetHour: {} hr", targetHour3);
+        logger.info("จำนวนชั่วโมงของงานที่ช่างคนที่ 1 ต้องทำ: {} ชั่วโมง", targetHour1);
+        logger.info("จำนวนชั่วโมงของงานที่ช่างคนที่ 2 ต้องทำ: {} ชั่วโมง", targetHour2);
+        logger.info("จำนวนชั่วโมงของงานที่ช่างคนที่ 3 ต้องทำ: {} ชั่วโมง", targetHour3);
 
         updateConfigByKey(KEY_LOWEST_TOTAL_PRIORITY_HOUR, technician3TotalPriorityHour);
         updateConfigByKey(KEY_LOWEST_TOTAL_REQUEST_HOUR, technician3TotalRequestHour);
-        logger.info("technician3 totalPriorityHour: {} hr", technician3TotalPriorityHour);
-        logger.info("technician3 totalRequestHour: {} hr", technician3TotalRequestHour);
+        logger.info("จำนวนชั่วโมงรวมของงานที่มีลำดับความสำคัญลำดับที่ 1 และ 2 ที่ตรงกับความสามารถของช่างคนที่ 3: {} ชั่วโมง", technician3TotalPriorityHour);
+        logger.info("จำนวนชั่วโมงรวมของรายการแจ้งซ่อมทั้งหมด ที่ตรงกับความสามารถของช่างคนที่ 3: {} ชั่วโมง", technician3TotalRequestHour);
 
         updateConfigByKey(KEY_PRIORITY_HOUR_MIN, String.valueOf(priorityHourMin));
         updateConfigByKey(KEY_PRIORITY_HOUR_MAX, String.valueOf(priorityHourMax));
         updateConfigByKey(KEY_LOWEST_PRIORITY_HOUR_MIN, String.valueOf(lowestPriorityHourMin));
         updateConfigByKey(KEY_LOWEST_PRIORITY_HOUR_MAX, String.valueOf(lowestPriorityHourMax));
-        logger.info("technician1, technician2 priorityHourMin: {} hr", priorityHourMin);
-        logger.info("technician1, technician2 priorityHourMax: {} hr", priorityHourMax);
-        logger.info("technician3 priorityHourMin: {} hr", lowestPriorityHourMin);
-        logger.info("technician3 priorityHourMax: {} hr", lowestPriorityHourMax);
+        logger.info("จำนวนชั่วโมงขั้นต่ำของงานที่มีลำดับความสำคัญลำดับที่ 1 และ 2 ของช่างคนที่ 1 และ 2 ต้องทำ: {} ชั่วโมง", priorityHourMin);
+        logger.info("จำนวนชั่วโมงมากที่สุดของงานที่มีลำดับความสำคัญลำดับที่ 1 และ 2 ของช่างคนที่ 1 และ 2 สามารถทำได้: {} ชั่วโมง", priorityHourMax);
+        logger.info("จำนวนชั่วโมงขั้นต่ำของงานที่มีลำดับความสำคัญลำดับที่ 1 และ 2 ของช่างคนที่ 3 ต้องทำ: {} ชั่วโมง", lowestPriorityHourMin);
+        logger.info("จำนวนชั่วโมงมากที่สุดของงานที่มีลำดับความสำคัญลำดับที่ 1 และ 2 ของช่างคนที่ 3 สามารถทำได้: {} ชั่วโมง", lowestPriorityHourMax);
 
-        logger.info("---- finish finding config ----");
+        logger.info("-----------------------------------------\n");
     }
 
     public void updateDrive(int technicianId) {

@@ -50,7 +50,7 @@ public class RequestTypeService {
     }
 
     public void create(RequestType body) {
-        boolean isDup = this.requestTypeRepository.checkCreateDuplicate(body.getName());
+        boolean isDup = this.requestTypeRepository.checkCreateDuplicate(body.getName(), body.getRole().getId(), body.isCommonArea());
 
         if (isDup) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ERR_INSERT_DUPLICATE_REQUEST_TYPE);
@@ -60,7 +60,7 @@ public class RequestTypeService {
     }
 
     public void update(Integer id, RequestType body) {
-        boolean isDup = this.requestTypeRepository.checkUpdateDuplicate(id, body.getName());
+        boolean isDup = this.requestTypeRepository.checkUpdateDuplicate(id, body.getName(), body.getRole().getId(), body.isCommonArea());
 
         if (isDup) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ERR_UPDATE_INVALID_REQUEST_TYPE);

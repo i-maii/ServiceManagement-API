@@ -3,6 +3,8 @@ package com.example.servicemanagement.service;
 import com.example.servicemanagement.dto.*;
 import com.example.servicemanagement.entity.*;
 import com.example.servicemanagement.repository.RequestRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -15,6 +17,8 @@ import static com.example.servicemanagement.constant.Constant.*;
 
 @Service
 public class RequestService {
+
+    private static Logger logger = LoggerFactory.getLogger(RequestService.class);
 
     @Autowired
     RequestRepository requestRepository;
@@ -181,6 +185,7 @@ public class RequestService {
     }
 
     public List<TechnicianPlanDto> reorderPriority(List<Request> requestList) throws ParseException {
+        logger.info("---- เปลี่ยนลำดับงานปัจจุบันที่มีความสำคัญจากลำดับที่ 3 เป็นลำดับที่ 4 ----");
         Date[] dateRange = this.getLastWeekRange();
         Date start = dateRange[0];
         Date end = dateRange[1];
@@ -198,16 +203,22 @@ public class RequestService {
             technicianPlanDto.setApartment(request.getApartment());
 
             if (request.getPriority() == 3 && !(request.getRequestDate().after(start) && request.getRequestDate().before(end))) {
+                logger.info("เลขที่แจ้งซ่อม: {}, วันที่แจ้งซ่อม: {}, เปลี่ยนลำดับความสำคัญจากลำดับที่ 3 เป็นลำดับที่ 4", technicianPlanDto.getRequestId(), request.getRequestDate());
                 technicianPlanDto.setPriority(4);
+            } else {
+                logger.info("เลขที่แจ้งซ่อม: {}, วันที่แจ้งซ่อม: {}, ลำดับความสำคัญ: {}", technicianPlanDto.getRequestId(), request.getRequestDate(), technicianPlanDto.getPriority());
             }
 
             technicianPlanDtoList.add(technicianPlanDto);
         });
 
+        logger.info("----------------------------------------------------------\n");
+
         return technicianPlanDtoList;
     }
 
     public List<TechnicianPlanDto> requestListToTechnicianPlan(List<Request> requestList) {
+        logger.info("---- รายการงานซ่อมทั้งหมดที่จะนำมาหาแผนงานให้กับช่าง ----");
         List<TechnicianPlanDto> technicianPlanDtoList = new ArrayList<>();
         requestList.forEach(request -> {
             TechnicianPlanDto technicianPlanDto = new TechnicianPlanDto();
@@ -220,7 +231,17 @@ public class RequestService {
             technicianPlanDto.setRequest(request);
             technicianPlanDto.setApartment(request.getApartment());
             technicianPlanDtoList.add(technicianPlanDto);
+            logger.info("เลขที่แจ้งซ่อม: {}, หอ: {}, งานซ่อม: {}, ลำดับความสำคัญ: {}, วันที่แจ้งซ่อม: {}, เวลาที่ใช้: {}, จำนวนช่างที่ใช้: {}"
+                    , technicianPlanDto.getRequestId()
+                    , technicianPlanDto.getApartment().getName()
+                    , technicianPlanDto.getRequest().getRequestType().getName()
+                    , technicianPlanDto.getPriority()
+                    , technicianPlanDto.getRequest().getRequestDate()
+                    , technicianPlanDto.getEstimateTime()
+                    , technicianPlanDto.getRequest().getEstimateTechnician());
         });
+
+        logger.info("-------------------------------------------------\n");
 
         return technicianPlanDtoList;
     }
@@ -293,10 +314,10 @@ public class RequestService {
 
         if (request.getRequestType().getRole().getName().equals("technician")) {
             request.setStatus(STATUS_READY_FOR_ESTIMATION);
-//            sendEstimationNotification(apartment.getName(), roomNo, request.getRequestType().getName());
+            sendEstimationNotification(apartment.getName(), roomNo, request.getRequestType().getName());
         } else {
             request.setStatus(STATUS_READY_TO_SERVICE);
-//            sendServiceOtherNotification(apartment.getName(), roomNo, request.getRequestType());
+            sendServiceOtherNotification(apartment.getName(), roomNo, request.getRequestType());
         }
 
         this.requestRepository.saveAndFlush(request);

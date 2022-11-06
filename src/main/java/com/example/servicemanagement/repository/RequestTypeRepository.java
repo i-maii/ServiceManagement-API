@@ -16,13 +16,18 @@ public interface RequestTypeRepository extends JpaRepository<RequestType, Intege
 
     @Query(nativeQuery = true, value = "SELECT CASE WHEN COUNT(*) > 0 THEN 'true' ELSE 'false' END " +
             "FROM REQUEST_TYPE " +
-            "WHERE name = :name")
-    boolean checkCreateDuplicate(@Param("name") String name);
+            "WHERE name = :name " +
+            "AND role_id = :role_id " +
+            "AND is_common_area = :common_area")
+    boolean checkCreateDuplicate(@Param("name") String name, @Param("role_id") Integer roleId, @Param("common_area") boolean commonArea);
 
     @Query(nativeQuery = true, value = "SELECT CASE WHEN COUNT(*) > 0 THEN 'true' ELSE 'false' END " +
             "FROM REQUEST_TYPE " +
-            "WHERE id != :id AND name = :name")
-    boolean checkUpdateDuplicate(@Param("id") Integer id, @Param("name") String name);
+            "WHERE id != :id " +
+            "AND name = :name" +
+            "AND role_id = :role_id " +
+            "AND is_common_area = :common_area")
+    boolean checkUpdateDuplicate(@Param("id") Integer id, @Param("name") String name, @Param("role_id") Integer roleId, @Param("common_area") boolean commonArea);
 
     List<RequestType> findRequestTypesByIdIn(List<Integer> id);
 

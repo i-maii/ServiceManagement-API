@@ -10,10 +10,8 @@ import org.springframework.stereotype.Service;
 
 import java.sql.Time;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.List;
 
 
 @Service
@@ -81,7 +79,11 @@ public class PushNotificationService {
 
     public void sendServiceOtherPushNotification(String notificationToken, String apartmentName, String roomNo, String requestType) {
         PushNotificationDto request = new PushNotificationDto();
-        request.setMessage("หอ" + apartmentName + " ห้อง" + roomNo + " " + requestType);
+        if (roomNo.isEmpty()) {
+            request.setMessage("หอ" + apartmentName + " " + requestType);
+        } else {
+            request.setMessage("หอ" + apartmentName + " ห้อง" + roomNo + " " + requestType);
+        }
         request.setTitle("แจ้งรายการซ่อม");
         request.setToken(notificationToken);
         request.setAction("service_other");

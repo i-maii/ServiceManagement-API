@@ -45,7 +45,7 @@ public class ApartmentService {
     }
 
     public void create(Apartment body) {
-        boolean isDup = this.apartmentRepository.checkCreateDuplicate(body.getName());
+        boolean isDup = this.apartmentRepository.checkCreateDuplicate(body.getName(), body.getLatitude(), body.getLongitude());
 
         if (isDup) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ERR_INSERT_DUPLICATE_APARTMENT);
@@ -64,7 +64,7 @@ public class ApartmentService {
     }
 
     public void update(Integer id, Apartment body) {
-        boolean isDup = this.apartmentRepository.checkUpdateDuplicate(id, body.getName());
+        boolean isDup = this.apartmentRepository.checkUpdateDuplicate(id, body.getName(), body.getLatitude(), body.getLongitude());
 
         if (isDup) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ERR_UPDATE_INVALID_APARTMENT);
