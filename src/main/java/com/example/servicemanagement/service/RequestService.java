@@ -6,7 +6,9 @@ import com.example.servicemanagement.repository.RequestRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -263,8 +265,8 @@ public class RequestService {
     }
 
     private Date[] getLastWeekRange() throws ParseException {
-//        Date date = new Date();
-        Date date = new SimpleDateFormat("yyyy-MM-dd").parse("2022-08-24");
+        Date date = new Date();
+//        Date date = new SimpleDateFormat("yyyy-MM-dd").parse("2022-08-24");
         Calendar c = Calendar.getInstance();
         c.setTime(date);
         int i = c.get(Calendar.DAY_OF_WEEK) - c.getFirstDayOfWeek();
@@ -292,8 +294,17 @@ public class RequestService {
     }
 
     public void createRequest(RequestDto dto) {
+        RequestType requestType = this.requestTypeService.getRequestTypeById(dto.getRequestTypeId());
+        if (requestType.isCommonArea()) {
+            boolean isDup = this.requestRepository.checkCreateDuplicate(dto.getApartmentId(), dto.getRequestTypeId());
+
+            if (isDup) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ERR_INSERT_DUPLICATE_REQUEST);
+            }
+        }
+
         Request request = new Request();
-        request.setRequestType(this.requestTypeService.getRequestTypeById(dto.getRequestTypeId()));
+        request.setRequestType(requestType);
         request.setUser(this.userService.getById(dto.getUserId()));
         Integer apartmentId = dto.getApartmentId();
         String roomNo = "";
