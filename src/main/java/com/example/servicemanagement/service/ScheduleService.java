@@ -910,8 +910,6 @@ public class ScheduleService {
         int technician3TargetHour = this.configService.getTechnician3TargetHourConfig();
         boolean isRequire2 = this.scheduleRepository.checkHaveRequire2();
 
-        this.configService.updateDrive(this.scheduleRepository.findDriver());
-
         if (isRequire2) {
             findRouteRequire2(technician1TargetHour, technician2TargetHour, technician3TargetHour);
         } else {
@@ -987,7 +985,8 @@ public class ScheduleService {
             this.stgScheduleService.prepareSchedule(require2TechnicianId);
         }
 
-        int driver = this.configService.getConfigByKey(KEY_DRIVER);
+        int driver = this.scheduleRepository.findDriver();
+        this.configService.updateDrive(driver);
         boolean isMove = false;
         do {
             processFindRoute(technician1TargetHour, technician2TargetHour, technician3TargetHour, driver);
@@ -1003,7 +1002,8 @@ public class ScheduleService {
     }
 
     private void findRouteRequire1(int technician1TargetHour, int technician2TargetHour, int technician3TargetHour) {
-        int driver = this.configService.getConfigByKey(KEY_DRIVER);
+        int driver = this.scheduleRepository.findDriver();
+        this.configService.updateDrive(driver);
 
         logger.info("**** ช่าง {} เป็นคนขับ ****", this.technicianService.getTechnicianById(driver).getUser().getName());
         do {
@@ -1436,13 +1436,15 @@ public class ScheduleService {
 
         // ช่าง 2 คน
         if (technician1TotalHour != 0 && technician2TotalHour != 0 && technician3TotalHour == 0) {
-            if (technician1TotalHour == technician2TotalHour && technician1LatestApartmentId != technician2LatestApartmentId) {
-                if (driver == 1) {
-                    firstRoute = technician2LatestApartmentId;
-                } else {
-                    firstRoute = technician1LatestApartmentId;
+            if (technician1TotalHour != technician1TargetHour && technician2TotalHour != technician2TargetHour) {
+                if (technician1TotalHour == technician2TotalHour && technician1LatestApartmentId != technician2LatestApartmentId) {
+                    if (driver == 1) {
+                        firstRoute = technician2LatestApartmentId;
+                    } else {
+                        firstRoute = technician1LatestApartmentId;
+                    }
+                    firstTechnicianIds.add(driver);
                 }
-                firstTechnicianIds.add(driver);
             }
         }
 
@@ -1927,7 +1929,6 @@ public class ScheduleService {
             }
 
             saveTechnicianPlanTemp(tempPlan);
-            this.configService.updateDrive(this.scheduleRepository.findDriver());
 
             if (isRequire2) {
                 findRouteRequire2(technician1TargetHour, technician2TargetHour, technician3TargetHour);
