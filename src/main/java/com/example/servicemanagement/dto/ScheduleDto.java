@@ -16,4 +16,6 @@ public class ScheduleDto {
     private String roomNo;
     private String requestType;
     private Integer requestHour;
+    private String serviceStartTime;
+    private String serviceEndTime;
 }

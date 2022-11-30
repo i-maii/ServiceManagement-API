@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import javax.persistence.*;
+import java.sql.Time;
 import java.util.Date;
 
 @Entity
@@ -29,8 +30,6 @@ public class StgSchedule {
     @JoinColumn(name = "request_id")
     private Request request;
 
-    private Date serviceDateTime;
-
     @OneToOne
     @JoinColumn(name = "apartment_id")
     private Apartment apartment;
@@ -38,4 +37,7 @@ public class StgSchedule {
     private Integer sequence;
 
     private Integer requestHour;
+
+    private Time serviceStartTime;
+    private Time serviceEndTime;
 }

@@ -38,9 +38,16 @@ public class ScheduleController {
     public void closeTaskSchedule(
             @PathVariable("id") Integer scheduleId,
             @PathVariable("action") String action,
-            @PathVariable("requestId") Integer requestId
+            @PathVariable(value = "requestId", required = false) Integer requestId
     ) {
         this.scheduleService.closeTask(scheduleId, requestId, action);
+    }
+
+    @PostMapping("/{id}/close")
+    public void closeTaskSchedule(
+            @PathVariable("id") Integer scheduleId
+    ) {
+        this.scheduleService.closeTask(scheduleId, null, "close");
     }
 
     @GetMapping("/driver/{userId}")

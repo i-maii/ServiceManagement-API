@@ -24,6 +24,7 @@ public class ScheduleService {
 
     private static Logger logger = LoggerFactory.getLogger(ScheduleService.class);
     private SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    private SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm");
 
     private int totalApartment = 6;
     private long totalDate = Long.MAX_VALUE;
@@ -175,7 +176,7 @@ public class ScheduleService {
         return possibleLowestPlanList;
     }
 
-    private void findTechnicianPlanFor2Technician(Integer[] targetHour, Integer[] range, List<TechnicianPlanDto> requestList, int numOfTechnician, List<TechnicianPlanDto> technician3Plan) {
+    private void findTechnicianPlanFor2Technician(Integer[] targetHour, Integer[] range, List<TechnicianPlanDto> requestList, int numOfTechnician, List<TechnicianPlanDto> technician3Plan) throws ParseException {
         logger.info("---- เริ่มหาแผนงานสำหรับช่าง 2 คน ----");
         List<TechnicianPlanDto> sortedRequestList = requestList.stream().sorted(Comparator.comparingInt(TechnicianPlanDto::getEstimateTime)).toList();
 
@@ -246,7 +247,7 @@ public class ScheduleService {
         logger.info("----------------------------------\n");
     }
 
-    private void findTechnicianPlanFor3Technician(List<TechnicianPlanDto> allRequest, Integer[] lowestRangePriority, Integer[] targetHour) {
+    private void findTechnicianPlanFor3Technician(List<TechnicianPlanDto> allRequest, Integer[] lowestRangePriority, Integer[] targetHour) throws ParseException {
         logger.info("---- เริ่มหาแผนงานสำหรับช่าง 3 คน ----");
         List<List<TechnicianPlanDto>> possibleLowestPlanList = findTechnicianPlanForLowestTechnician(targetHour, allRequest, lowestRangePriority);
 
@@ -287,7 +288,7 @@ public class ScheduleService {
         logger.info("----------------------------------\n");
     }
 
-    private void findRequire2TechnicianPlanFor2Technician(List<TechnicianPlanDto> allRequest, Integer[] targetHour, int numOfTechnician, List<TechnicianPlanDto> technician3Plan) {
+    private void findRequire2TechnicianPlanFor2Technician(List<TechnicianPlanDto> allRequest, Integer[] targetHour, int numOfTechnician, List<TechnicianPlanDto> technician3Plan) throws ParseException {
         logger.info("---- เริ่มหาแผนงานสำหรับช่าง 2 คน ----");
         List<TechnicianPlanDto> requestList = allRequest.stream().filter(req -> req.getRequest().getEstimateTechnician() == 1).toList();
         List<TechnicianPlanDto> require2RequestList = allRequest.stream().filter(Predicate.not(requestList::contains)).toList();
@@ -374,7 +375,7 @@ public class ScheduleService {
         logger.info("----------------------------------\n");
     }
 
-    private void findRequire2TechnicianPlanFor3Technician(List<TechnicianPlanDto> requestListForPlan, Integer[] lowestRange, Integer[] targetHour) {
+    private void findRequire2TechnicianPlanFor3Technician(List<TechnicianPlanDto> requestListForPlan, Integer[] lowestRange, Integer[] targetHour) throws ParseException {
         logger.info("---- เริ่มหาแผนงานสำหรับช่าง 3 คน ----");
         List<List<TechnicianPlanDto>> possibleLowestPlanList = findTechnicianPlanForLowestTechnician(targetHour, requestListForPlan, lowestRange);
 
@@ -1907,7 +1908,7 @@ public class ScheduleService {
         return true;
     }
 
-    private void checkBestRoute(List<List<TechnicianPlanDto>> technician1Plan, List<List<TechnicianPlanDto>> technician2Plan, List<TechnicianPlanDto> technician3Plan, boolean isRequire2, int numOfTechnician) {
+    private void checkBestRoute(List<List<TechnicianPlanDto>> technician1Plan, List<List<TechnicianPlanDto>> technician2Plan, List<TechnicianPlanDto> technician3Plan, boolean isRequire2, int numOfTechnician) throws ParseException {
         int technician1TargetHour = this.configService.getTechnician1TargetHourConfig();
         int technician2TargetHour = this.configService.getTechnician2TargetHourConfig();
         int technician3TargetHour = this.configService.getTechnician3TargetHourConfig();
@@ -1926,6 +1927,7 @@ public class ScheduleService {
             }
 
             saveTechnicianPlanTemp(tempPlan);
+            this.configService.updateDrive(this.scheduleRepository.findDriver());
 
             if (isRequire2) {
                 findRouteRequire2(technician1TargetHour, technician2TargetHour, technician3TargetHour);
@@ -1947,6 +1949,10 @@ public class ScheduleService {
         }
 
         this.stgScheduleService.saveBestRequest();
+
+        this.configService.updateDrive(this.scheduleRepository.findDriver());
+        updateServiceTime();
+        this.requestService.updateServiceDate();
     }
 
     private float findTotalDistance() {
@@ -2023,6 +2029,8 @@ public class ScheduleService {
                 scheduleDto.setRoomNo(tenant.getRoomNo());
                 scheduleDto.setRequestType(schedule.getRequest().getRequestType().getName());
                 scheduleDto.setRequestHour(schedule.getRequestHour());
+                scheduleDto.setServiceStartTime(timeFormat.format(new Date(schedule.getServiceStartTime().getTime())));
+                scheduleDto.setServiceEndTime(timeFormat.format(new Date(schedule.getServiceEndTime().getTime())));
             }
             scheduleDto.setApartmentName(schedule.getApartment().getName());
 
@@ -2036,16 +2044,18 @@ public class ScheduleService {
         Schedule schedule = this.scheduleRepository.findScheduleById(scheduleId);
         this.scheduleRepository.closeTask(schedule.getTechnician().getId(), schedule.getSequence());
 
-        List<Schedule> schedules = this.scheduleRepository.findSchedulesByRequestId(requestId);
-        if (schedules.isEmpty()) {
-            Request request = this.requestService.getRequestById(requestId);
-            if (action.equals("cancel")) {
-                request.setStatus(STATUS_READY_FOR_PLAN);
-            } else if (action.equals("close")) {
-                request.setStatus(STATUS_DONE);
-            }
+        if (requestId != null) {
+            List<Schedule> schedules = this.scheduleRepository.findSchedulesByRequestId(requestId);
+            if (schedules.isEmpty()) {
+                Request request = this.requestService.getRequestById(requestId);
+                if (action.equals("cancel")) {
+                    request.setStatus(STATUS_READY_FOR_PLAN);
+                } else if (action.equals("close")) {
+                    request.setStatus(STATUS_DONE);
+                }
 
-            this.requestService.updateRequest(requestId, request);
+                this.requestService.updateRequest(requestId, request);
+            }
         }
     }
 

@@ -382,6 +382,7 @@ public class RequestService {
         request.setEstimateTechnician(dto.getTechnician());
         request.setEstimateTime(dto.getTime());
         request.setPriority(dto.getPriority());
+        request.setStatus(STATUS_READY_FOR_PLAN);
 
         this.requestRepository.saveAndFlush(request);
     }
