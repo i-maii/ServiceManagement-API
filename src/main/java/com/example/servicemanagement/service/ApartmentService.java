@@ -61,6 +61,8 @@ public class ApartmentService {
             float distance = getDistance(newApartment.getLatitude(), newApartment.getLongitude(), apartment.getLatitude(), apartment.getLongitude());
             this.apartmentDistanceService.createDistance(distance, newApartment.getId(), apartment.getId());
         }
+
+        this.apartmentDistanceService.createOwnDistance(body.getId());
     }
 
     public void update(Integer id, Apartment body) {
@@ -112,7 +114,7 @@ public class ApartmentService {
 
         if (response.getBody() != null) {
             Integer distance = response.getBody().getRows().get(0).getElements().get(0).getDistance().getValue();
-            return Math.round(distance / 1000.0);
+            return (float) (distance / 1000.0);
         } else {
             return 0;
         }

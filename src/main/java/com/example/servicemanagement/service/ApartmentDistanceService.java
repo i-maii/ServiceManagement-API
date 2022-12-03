@@ -49,7 +49,14 @@ public class ApartmentDistanceService {
         revert.setDestination(newApartmentId);
         revert.setDistance(distance);
         this.apartmentDistanceRepository.saveAndFlush(revert);
+    }
 
+    public void createOwnDistance(Integer id) {
+        ApartmentDistance apartmentDistance = new ApartmentDistance();
+        apartmentDistance.setStart(id);
+        apartmentDistance.setDestination(id);
+        apartmentDistance.setDistance(0);
+        this.apartmentDistanceRepository.saveAndFlush(apartmentDistance);
     }
 
     public void updateDistanceStore(float distanceStore, Integer id) {

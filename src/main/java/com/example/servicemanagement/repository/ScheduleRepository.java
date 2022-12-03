@@ -30,7 +30,7 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Integer> {
 
     @Query(nativeQuery = true, value = "SELECT DISTINCT s.apartment_id " +
             "FROM SCHEDULE s " +
-            "WHERE s.technician_id IN (" +
+            "WHERE s.technician_id IN ( " +
             "   SELECT s2.technician_id " +
             "   FROM SCHEDULE s2 " +
             "   WHERE s2.`sequence` IS NULL " +
@@ -46,7 +46,7 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Integer> {
             "INNER JOIN ( " +
             "   SELECT * " +
             "   FROM APARTMENT_DISTANCE ad " +
-            "   WHERE ad.`start` = :start AND ad.destination IN :destination" +
+            "   WHERE ad.`start` = :start AND ad.destination IN :destination " +
             "   ORDER BY ad.distance ASC " +
             "   LIMIT 1 " +
             ") AS nearest ON s.apartment_id = nearest.destination AND nearest.`start` = :start " +
@@ -58,7 +58,7 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Integer> {
             "INNER JOIN ( " +
             "   SELECT * " +
             "   FROM APARTMENT_DISTANCE ad " +
-            "   WHERE ad.`start` = :start AND ad.destination IN :destination" +
+            "   WHERE ad.`start` = :start AND ad.destination IN :destination " +
             "   ORDER BY ad.distance ASC " +
             "   LIMIT 1 " +
             ") AS nearest ON s.apartment_id = nearest.destination AND nearest.`start` = :start " +
@@ -80,7 +80,7 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Integer> {
             "AND destination IN ( " +
             "   SELECT DISTINCT apartment_id " +
             "   FROM SCHEDULE s " +
-            "   WHERE technician_id <> :driver" +
+            "   WHERE technician_id <> :driver " +
             "   AND s.`sequence` IS NULL " +
             ") " +
             "ORDER BY distance ASC " +
@@ -93,7 +93,7 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Integer> {
             "AND destination IN ( " +
             "   SELECT DISTINCT apartment_id " +
             "   FROM SCHEDULE s " +
-            "   WHERE technician_id = :technician_id" +
+            "   WHERE technician_id = :technician_id " +
             "   AND s.`sequence` IS NULL " +
             ") " +
             "ORDER BY distance ASC " +
