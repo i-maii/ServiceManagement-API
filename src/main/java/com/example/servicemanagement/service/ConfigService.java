@@ -1,5 +1,6 @@
 package com.example.servicemanagement.service;
 
+import com.example.servicemanagement.dto.TechnicianPlanDto;
 import com.example.servicemanagement.entity.Config;
 import com.example.servicemanagement.entity.Request;
 import com.example.servicemanagement.repository.ConfigRepository;
@@ -8,7 +9,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.Comparator;
 import java.util.List;
+import java.util.function.Predicate;
 
 import static com.example.servicemanagement.constant.Constant.*;
 
@@ -26,10 +29,20 @@ public class ConfigService {
     public void findConfiguration() {
         logger.info("---- เริ่มคำนวณหาจำนวนชั่วโมงและจำนวนช่าง ----");
         List<Request> allRequest = this.requestService.getRequestByStatus(STATUS_READY_FOR_PLAN);
+        List<Request> require1Request = allRequest.stream().filter(req -> req.getEstimateTechnician() == 1).toList();
+        List<Request> require1PriorityRequest = require1Request.stream().filter(req -> MOST_PRIORITY.contains(req.getPriority())).sorted(Comparator.comparingInt(Request::getEstimateTime).reversed()).toList();
+        List<Request> require1NormalRequest = require1Request.stream().filter(Predicate.not(require1PriorityRequest::contains)).toList();
+        List<Request> require2Request = allRequest.stream().filter(req -> req.getEstimateTechnician() > 1).toList();
+        List<Request> require2PriorityRequest = require2Request.stream().filter(req -> MOST_PRIORITY.contains(req.getPriority())).toList();
+        List<Request> require2NormalRequest = require2Request.stream().filter(Predicate.not(require2PriorityRequest::contains)).toList();
         boolean require2Technician = this.requestService.checkRequire2Technician(allRequest);
 
         int totalRequestHour = this.requestService.getTotalRequestHour(allRequest, require2Technician);
+        int totalRequire2RequestHour = require2Request.stream().map(Request::getEstimateTime).mapToInt(Integer::intValue).sum() * 2;
+        int totalRequire1RequestHour = require1Request.stream().map(Request::getEstimateTime).mapToInt(Integer::intValue).sum();
         int totalPriorityRequestHour = this.requestService.getTotalPriorityHour(allRequest, require2Technician);
+        int totalRequire2PriorityRequestHour = require2PriorityRequest.stream().map(Request::getEstimateTime).mapToInt(Integer::intValue).sum() * 2;
+        int totalRequire1PriorityRequestHour = require1PriorityRequest.stream().map(Request::getEstimateTime).mapToInt(Integer::intValue).sum();
         int lowestTotalPriorityHour = this.requestService.getLowestTotalPriorityHour();
         int lowestTotalRequestHour = this.requestService.getLowestTotalRequestHour();
 
@@ -40,7 +53,11 @@ public class ConfigService {
         updateConfigByKey(KEY_TOTAL_REQUEST_HOUR, String.valueOf(totalRequestHour));
         updateConfigByKey(KEY_TOTAL_PRIORITY_HOUR, String.valueOf(totalPriorityRequestHour));
         logger.info("จำนวนชั่วโมงรวมของรายการแจ้งซ่อมทั้งหมด: {} ชั่วโมง", totalRequestHour);
+        logger.info("จำนวนชั่วโมงรวมของรายการแจ้งซ่อมทั้งหมดที่ใช้ช่าง 1 คน: {} ชั่วโมง", totalRequire1RequestHour);
+        logger.info("จำนวนชั่วโมงรวมของรายการแจ้งซ่อมทั้งหมดที่ใช้ช่าง 2 คน: {} ชั่วโมง", totalRequire2RequestHour);
         logger.info("จำนวนชั่วโมงรวมของงานที่มีลำดับความสำคัญลำดับที่ 1 และ 2: {} ชั่วโมง", totalPriorityRequestHour);
+        logger.info("จำนวนชั่วโมงรวมของงานที่มีลำดับความสำคัญลำดับที่ 1 และ 2 ที่ใช้ช่าง 1 คน: {} ชั่วโมง", totalRequire1PriorityRequestHour);
+        logger.info("จำนวนชั่วโมงรวมของงานที่มีลำดับความสำคัญลำดับที่ 1 และ 2 ที่ใช้ช่าง 2 คน: {} ชั่วโมง", totalRequire2PriorityRequestHour);
 
         if (totalRequestHour > 16 && totalRequestHour <= 20) {
             if (totalPriorityRequestHour > 16) {
@@ -58,6 +75,11 @@ public class ConfigService {
             targetHour = new Integer[2];
         }
 
+        if (require2Technician && usageTechnician < 2) {
+            usageTechnician = 2;
+            targetHour = new Integer[2];
+        }
+
         updateConfigByKey(KEY_USAGE_TECHNICIAN, String.valueOf(usageTechnician));
         logger.info("จำนวนช่างซ่อมที่ต้องใช้: {} คน", usageTechnician);
 
@@ -66,69 +88,173 @@ public class ConfigService {
         int lowestPriorityHourMin = 0;
         int lowestPriorityHourMax = 0;
 
-        if (usageTechnician == 1) {
-            if (totalRequestHour < 8) {
-                totalTargetHour = totalRequestHour;
-                targetHour[0] = totalRequestHour;
-            } else {
-                targetHour[0] = 8;
-            }
+        if (require2Technician) {
+            if (usageTechnician == 2) {
+                if (totalRequestHour < 16) {
+                    if (totalRequire2PriorityRequestHour < 16) {
+                        targetHour[0] = totalRequire2PriorityRequestHour / 2;
+                        targetHour[1] = totalRequire2PriorityRequestHour - targetHour[0];
 
-            priorityHourMax = Math.min(totalPriorityRequestHour, 8);
-        } else if (usageTechnician == 2) {
-            if (totalRequestHour < 16) {
-                totalTargetHour = totalRequestHour;
-                targetHour[0] = totalRequestHour / 2;
-                targetHour[1] = totalRequestHour - targetHour[0];
-            } else {
-                totalTargetHour = 16;
-                targetHour[0] = 8;
-                targetHour[1] = 8;
-            }
+                        if (!require1PriorityRequest.isEmpty()) {
+                            for (Request request: require1PriorityRequest) {
+                                if (targetHour[0] <= targetHour[1]) {
+                                    if (targetHour[0] + request.getEstimateTime() <= 8) {
+                                        targetHour[0] += request.getEstimateTime();
+                                    }
+                                } else {
+                                    if (targetHour[1] + request.getEstimateTime() <= 8) {
+                                        targetHour[1] += request.getEstimateTime();
+                                    }
+                                }
+                            }
+                        }
 
-            if (totalPriorityRequestHour >= 16) {
-                priorityHourMax = 8;
+                        priorityHourMin = Math.min(targetHour[0], targetHour[1]);
+                        priorityHourMax = Math.max(targetHour[0], targetHour[1]);
+
+                        if ((totalRequire2RequestHour / 2) <= Math.min(8-targetHour[0], 8-targetHour[1])) {
+                            targetHour[0] += totalRequire2RequestHour / 2;
+                            targetHour[1] += totalRequire2RequestHour / 2;
+                        } else {
+                            for (Request request: require2NormalRequest) {
+                                if (targetHour[0] < targetHour[1]) {
+                                    if (targetHour[0] + request.getEstimateTime() <= 8) {
+                                        targetHour[0] += request.getEstimateTime();
+                                        targetHour[1] += request.getEstimateTime();
+                                    }
+                                } else {
+                                    if (targetHour[1] + request.getEstimateTime() <= 8) {
+                                        targetHour[0] += request.getEstimateTime();
+                                        targetHour[1] += request.getEstimateTime();
+                                    }
+                                }
+                            }
+                        }
+
+                        if (!require1NormalRequest.isEmpty()) {
+                            for (Request request: require1NormalRequest) {
+                                if (targetHour[0] <= targetHour[1]) {
+                                    if (targetHour[0] + request.getEstimateTime() <= 8) {
+                                        targetHour[0] += request.getEstimateTime();
+                                    }
+                                } else {
+                                    if (targetHour[1] + request.getEstimateTime() <= 8) {
+                                        targetHour[1] += request.getEstimateTime();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    totalTargetHour = 16;
+                    targetHour[0] = 8;
+                    targetHour[1] = 8;
+                    priorityHourMax = 8;
+                }
             } else {
-                priorityHourMin = totalPriorityRequestHour / 2;
-                priorityHourMax =  Math.min(totalPriorityRequestHour, 8);
+                if (totalRequestHour < 24) {
+                    totalTargetHour = totalRequestHour;
+                    targetHour[0] = totalRequestHour / 3;
+                    targetHour[1] = (totalRequestHour - targetHour[0]) / 2;
+                    targetHour[2] = totalRequestHour - targetHour[1];
+                } else {
+                    if (lowestTotalRequestHour < 8) {
+                        totalTargetHour = 16 + lowestTotalRequestHour;
+                        targetHour[0] = 8;
+                        targetHour[1] = 8;
+                        targetHour[2] = lowestTotalRequestHour;
+                    } else {
+                        totalTargetHour = 24;
+                        targetHour[0] = 8;
+                        targetHour[1] = 8;
+                        targetHour[2] = 8;
+                    }
+                }
+
+                int avgPriorityHour = totalPriorityRequestHour / 3;
+
+                if (lowestTotalPriorityHour < avgPriorityHour) {
+                    lowestPriorityHourMax = lowestTotalPriorityHour;
+
+                    int remainingPriorityHour = totalPriorityRequestHour - lowestTotalPriorityHour;
+                    if (remainingPriorityHour > 16) {
+                        priorityHourMax = 8;
+                    } else {
+                        priorityHourMin = remainingPriorityHour / 2;
+                        priorityHourMax = Math.min(totalPriorityRequestHour, 8);
+                    }
+                } else {
+                    lowestPriorityHourMin = avgPriorityHour;
+                    lowestPriorityHourMax = Math.min(lowestTotalPriorityHour, 8);
+                    priorityHourMin = avgPriorityHour;
+                    priorityHourMax = Math.min(totalPriorityRequestHour, 8);
+                }
             }
         } else {
-            if (totalRequestHour < 24) {
-                totalTargetHour = totalRequestHour;
-                targetHour[0] = totalRequestHour / 3;
-                targetHour[1] = (totalRequestHour - targetHour[0]) / 2;
-                targetHour[2] = totalRequestHour - targetHour[1];
-            } else {
-                if (lowestTotalRequestHour < 8) {
-                    totalTargetHour = 16 + lowestTotalRequestHour;
-                    targetHour[0] = 8;
-                    targetHour[1] = 8;
-                    targetHour[2] = lowestTotalRequestHour;
+            if (usageTechnician == 1) {
+                if (totalRequestHour < 8) {
+                    totalTargetHour = totalRequestHour;
+                    targetHour[0] = totalRequestHour;
                 } else {
-                    totalTargetHour = 24;
+                    targetHour[0] = 8;
+                }
+
+                priorityHourMax = Math.min(totalPriorityRequestHour, 8);
+            } else if (usageTechnician == 2) {
+                if (totalRequestHour < 16) {
+                    totalTargetHour = totalRequestHour;
+                    targetHour[0] = totalRequestHour / 2;
+                    targetHour[1] = totalRequestHour - targetHour[0];
+                } else {
+                    totalTargetHour = 16;
                     targetHour[0] = 8;
                     targetHour[1] = 8;
-                    targetHour[2] = 8;
                 }
-            }
 
-            int avgPriorityHour = totalPriorityRequestHour / 3;
-
-            if (lowestTotalPriorityHour < avgPriorityHour) {
-                lowestPriorityHourMax = lowestTotalPriorityHour;
-
-                int remainingPriorityHour = totalPriorityRequestHour - lowestTotalPriorityHour;
-                if (remainingPriorityHour > 16) {
+                if (totalPriorityRequestHour >= 16) {
                     priorityHourMax = 8;
                 } else {
-                    priorityHourMin = remainingPriorityHour / 2;
-                    priorityHourMax =  Math.min(totalPriorityRequestHour, 8);
+                    priorityHourMin = totalPriorityRequestHour / 2;
+                    priorityHourMax = Math.min(totalPriorityRequestHour, 8);
                 }
             } else {
-                lowestPriorityHourMin = avgPriorityHour;
-                lowestPriorityHourMax = Math.min(lowestTotalPriorityHour, 8);
-                priorityHourMin = avgPriorityHour;
-                priorityHourMax =  Math.min(totalPriorityRequestHour, 8);
+                if (totalRequestHour < 24) {
+                    totalTargetHour = totalRequestHour;
+                    targetHour[0] = totalRequestHour / 3;
+                    targetHour[1] = (totalRequestHour - targetHour[0]) / 2;
+                    targetHour[2] = totalRequestHour - targetHour[1];
+                } else {
+                    if (lowestTotalRequestHour < 8) {
+                        totalTargetHour = 16 + lowestTotalRequestHour;
+                        targetHour[0] = 8;
+                        targetHour[1] = 8;
+                        targetHour[2] = lowestTotalRequestHour;
+                    } else {
+                        totalTargetHour = 24;
+                        targetHour[0] = 8;
+                        targetHour[1] = 8;
+                        targetHour[2] = 8;
+                    }
+                }
+
+                int avgPriorityHour = totalPriorityRequestHour / 3;
+
+                if (lowestTotalPriorityHour < avgPriorityHour) {
+                    lowestPriorityHourMax = lowestTotalPriorityHour;
+
+                    int remainingPriorityHour = totalPriorityRequestHour - lowestTotalPriorityHour;
+                    if (remainingPriorityHour > 16) {
+                        priorityHourMax = 8;
+                    } else {
+                        priorityHourMin = remainingPriorityHour / 2;
+                        priorityHourMax = Math.min(totalPriorityRequestHour, 8);
+                    }
+                } else {
+                    lowestPriorityHourMin = avgPriorityHour;
+                    lowestPriorityHourMax = Math.min(lowestTotalPriorityHour, 8);
+                    priorityHourMin = avgPriorityHour;
+                    priorityHourMax = Math.min(totalPriorityRequestHour, 8);
+                }
             }
         }
 

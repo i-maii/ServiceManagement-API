@@ -265,8 +265,8 @@ public class RequestService {
     }
 
     private Date[] getLastWeekRange() throws ParseException {
-        Date date = new Date();
-//        Date date = new SimpleDateFormat("yyyy-MM-dd").parse("2022-08-24");
+//        Date date = new Date();
+        Date date = new SimpleDateFormat("yyyy-MM-dd").parse("2022-12-03");
         Calendar c = Calendar.getInstance();
         c.setTime(date);
         int i = c.get(Calendar.DAY_OF_WEEK) - c.getFirstDayOfWeek();

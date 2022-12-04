@@ -28,6 +28,14 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Integer> {
             "LIMIT 1")
     Integer findDriver();
 
+    @Query(nativeQuery = true, value = "SELECT * FROM SCHEDULE s " +
+            "WHERE request_id NOT IN (" +
+            "   SELECT id " +
+            "   FROM REQUEST r " +
+            "   WHERE estimate_technician = 2) " +
+            "AND technician_id IN :technician_id")
+    List<Schedule> findRequire1Request(@Param("technician_id") List<Integer> technicianId);
+
     @Query(nativeQuery = true, value = "SELECT DISTINCT s.apartment_id " +
             "FROM SCHEDULE s " +
             "WHERE s.technician_id IN ( " +
