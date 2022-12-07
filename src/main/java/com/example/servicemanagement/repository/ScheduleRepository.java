@@ -28,6 +28,20 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Integer> {
             "LIMIT 1")
     Integer findDriver();
 
+    @Query(nativeQuery = true, value = "SELECT technician_id " +
+            "FROM SCHEDULE s " +
+            "GROUP BY technician_id " +
+            "ORDER BY COUNT(DISTINCT apartment_id) DESC")
+    List<Integer> findListDriver();
+
+    @Query(nativeQuery = true, value = "SELECT technician_id " +
+            "FROM SCHEDULE s " +
+            "WHERE technician_id IN :technician_id " +
+            "GROUP BY technician_id " +
+            "ORDER BY COUNT(DISTINCT request_id) DESC " +
+            "LIMIT 1")
+    Integer findDriver(@Param("technician_id") List<Integer> technicianIds);
+
     @Query(nativeQuery = true, value = "SELECT * FROM SCHEDULE s " +
             "WHERE request_id NOT IN (" +
             "   SELECT id " +

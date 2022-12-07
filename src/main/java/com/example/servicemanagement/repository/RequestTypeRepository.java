@@ -40,4 +40,16 @@ public interface RequestTypeRepository extends JpaRepository<RequestType, Intege
     List<RequestType> findRequestTypesByCommonArea(boolean isCommonArea);
 
     List<RequestType> findRequestTypesByOrderByCommonAreaAscNameAsc();
+
+    @Query(nativeQuery = true, value = "SELECT request_type_id " +
+            "FROM TECHNICIAN_ABILITIES " +
+            "GROUP BY request_type_id " +
+            "HAVING COUNT(technician_id) = 2")
+    List<Integer> findRequestType2Technician();
+
+    @Query(nativeQuery = true, value = "SELECT request_type_id " +
+            "FROM TECHNICIAN_ABILITIES " +
+            "GROUP BY request_type_id " +
+            "HAVING COUNT(technician_id) = 3")
+    List<Integer> findRequestType3Technician();
 }

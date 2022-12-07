@@ -83,4 +83,12 @@ public class RequestTypeService {
 
         this.requestTypeRepository.deleteById(id);
     }
+
+    public List<Integer> getRequestType2Technician() {
+        return this.requestTypeRepository.findRequestType2Technician();
+    }
+
+    public List<Integer> getRequestType3Technician() {
+        return this.requestTypeRepository.findRequestType3Technician();
+    }
 }

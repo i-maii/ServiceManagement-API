@@ -17,6 +17,9 @@ public interface TechnicianRepository extends JpaRepository<Technician, Integer>
     @Query(nativeQuery = true, value = "SELECT t.request_type_id FROM TECHNICIAN_ABILITIES t WHERE t.technician_id = (SELECT ta.technician_id FROM TECHNICIAN_ABILITIES ta GROUP BY ta.technician_id ORDER BY COUNT(*) ASC LIMIT 1)")
     List<Integer> findRequestTypeOfLowestTechnician();
 
+    @Query(nativeQuery = true, value = "SELECT t.request_type_id FROM TECHNICIAN_ABILITIES t WHERE t.technician_id = :technician_id")
+    List<Integer> findRequestTypeByTechnicianId(@Param("technician_id") Integer technicianId);
+
     Technician findTechnicianByUserId(Integer userId);
 
     @Query(nativeQuery = true, value = "SELECT CASE WHEN COUNT(*) > 0 THEN 'true' ELSE 'false' END " +

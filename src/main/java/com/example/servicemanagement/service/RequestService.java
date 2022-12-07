@@ -186,6 +186,15 @@ public class RequestService {
         this.requestRepository.saveAndFlush(request);
     }
 
+    public void updateRequestListStatusReadyToService(List<Schedule> schedules) {
+        List<Request> requestList = schedules.stream().map(Schedule::getRequest).toList();
+
+        for (Request request : requestList) {
+            request.setStatus(STATUS_READY_TO_SERVICE);
+            this.requestRepository.saveAndFlush(request);
+        }
+    }
+
     public List<TechnicianPlanDto> reorderPriority(List<Request> requestList) throws ParseException {
         logger.info("---- เปลี่ยนลำดับงานปัจจุบันที่มีความสำคัญจากลำดับที่ 3 เป็นลำดับที่ 4 ----");
         Date[] dateRange = this.getLastWeekRange();
@@ -264,7 +273,7 @@ public class RequestService {
         return allRequest.stream().anyMatch(req -> req.getEstimateTechnician() > 1);
     }
 
-    private Date[] getLastWeekRange() throws ParseException {
+    public Date[] getLastWeekRange() throws ParseException {
 //        Date date = new Date();
         Date date = new SimpleDateFormat("yyyy-MM-dd").parse("2022-12-03");
         Calendar c = Calendar.getInstance();

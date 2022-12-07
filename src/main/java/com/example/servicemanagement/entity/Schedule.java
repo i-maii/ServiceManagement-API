@@ -36,4 +36,7 @@ public class Schedule {
 
     private Time serviceStartTime;
     private Time serviceEndTime;
+
+    @Transient
+    private Integer priority;
 }

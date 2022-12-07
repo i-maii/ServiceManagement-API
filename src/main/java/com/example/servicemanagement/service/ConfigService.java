@@ -303,7 +303,7 @@ public class ConfigService {
         updateConfigByKey(KEY_DRIVER, String.valueOf(technicianId));
     }
 
-    private void updateConfigByKey(String key, String value) {
+    public void updateConfigByKey(String key, String value) {
         Config config = this.configRepository.findConfigByKey(key);
         config.setValue(value);
         this.configRepository.saveAndFlush(config);

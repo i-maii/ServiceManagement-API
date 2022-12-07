@@ -56,4 +56,9 @@ public class ScheduleController {
     ) {
         return this.scheduleService.checkDriver(userId);
     }
+
+    @GetMapping("/test")
+    public void test() throws ParseException {
+        this.scheduleService.findRequestPlanV2();
+    }
 }

@@ -47,9 +47,11 @@ public class TechnicianService {
         return this.technicianRepository.findLowestTechnician();
     }
 
-
     public List<Integer> getAllRequestTypeOfLowestTechnician() {
         return this.technicianRepository.findRequestTypeOfLowestTechnician();
+    }
+    public List<Integer> getAllRequestType(Integer technicianId) {
+        return this.technicianRepository.findRequestTypeByTechnicianId(technicianId);
     }
 
     public Technician getTechnicianByUserId(Integer userId) {
